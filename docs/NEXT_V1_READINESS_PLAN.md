@@ -12,6 +12,7 @@ The `feature/full-tool-parity-and-hooks` branch has been merged, the Go backend 
 - Python backend remains available for rollback.
 - Tool parity blockers are fixed.
 - Post-build hooks are integrated with dry-run defaults.
+- SRI `check_sri_versions` is native Go and validated against the local branch shim.
 - Coverage is materially improved, but there is still room to harden non-critical paths.
 
 ## Remaining work before `v1.0.0`
@@ -50,4 +51,3 @@ The `feature/full-tool-parity-and-hooks` branch has been merged, the Go backend 
 - hook activation strategy is explicitly approved,
 - secret file permissions are verified,
 - and the operator confirms the final release policy.
-

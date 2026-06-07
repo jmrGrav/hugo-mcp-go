@@ -1,11 +1,17 @@
 package tools
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/jmrGrav/hugo-mcp-go/internal/sri"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -35,7 +41,9 @@ func TestParityToolCatalogIncludesSRIAndFeaturedImage(t *testing.T) {
 		"create_page",
 		"delete_page",
 		"generate_featured_image",
+		"get_asset_chunk",
 		"get_page",
+		"get_page_chunk",
 		"list_assets",
 		"list_pages",
 		"update_page",
@@ -47,7 +55,8 @@ func TestParityToolCatalogIncludesSRIAndFeaturedImage(t *testing.T) {
 }
 
 func TestCheckSRIVersionsParityContract(t *testing.T) {
-	session, ctx := mustNewMutationSession(t, newMutationDeps(t, &fakeBuildRunner{}))
+	deps := newSriParityDeps(t)
+	session, ctx := mustNewMutationSession(t, deps)
 	defer session.Close()
 
 	res, err := session.CallTool(ctx, &mcp.CallToolParams{
@@ -60,15 +69,23 @@ func TestCheckSRIVersionsParityContract(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CallTool(check_sri_versions) protocol error = %v", err)
 	}
-	if !res.IsError {
-		// The contract is a structured success response when no audit handlers are installed.
-		text := res.Content[0].(*mcp.TextContent).Text
-		if text == "" {
-			t.Fatal("CallTool(check_sri_versions) returned empty content")
-		}
-		return
+	if res.IsError {
+		t.Fatalf("CallTool(check_sri_versions) returned error: %#v", res)
 	}
-	t.Fatalf("CallTool(check_sri_versions) unexpectedly returned an error response: %#v", res)
+	got := decodeToolJSON(t, res)
+	if got["plugin"] != "sri-check" {
+		t.Fatalf("plugin = %v want sri-check", got["plugin"])
+	}
+	if got["success"] != true {
+		t.Fatalf("success = %v want true", got["success"])
+	}
+	if got["exit_code"] != float64(0) {
+		t.Fatalf("exit_code = %v want 0", got["exit_code"])
+	}
+	report := got["report"].(map[string]any)
+	if report["summary"] != "OK" {
+		t.Fatalf("report.summary = %v want OK", report["summary"])
+	}
 }
 
 func TestGenerateFeaturedImageParityContract(t *testing.T) {
@@ -118,6 +135,85 @@ func TestGenerateFeaturedImageParityContract(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(ws.StaticRoot, "images", "parity-tool-featured.jpg")); err != nil {
 		t.Fatalf("generated image missing: %v", err)
+	}
+}
+
+func newSriParityDeps(t *testing.T) Deps {
+	t.Helper()
+	ws := newTestWorkspace(t)
+	mustWrite(t, filepath.Join(ws.HugoRoot, "themes", "LoveIt", "assets", "data", "cdn"), "jsdelivr.yml", []byte(`prefix:
+  libFiles: https://cdn.jsdelivr.net/npm/
+libFiles:
+  animateCSS: animate.css@4.1.1/animate.min.css
+`))
+	mustWrite(t, filepath.Join(ws.HugoRoot, "data"), "sri.yaml", []byte(`"https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css": "sha256-`+hashForTool([]byte("animate-ok"))+`"
+`))
+	mustWrite(t, filepath.Join(ws.HugoRoot, "public"), "index.html", []byte(`<script src="https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css"></script>`))
+	mustWrite(t, filepath.Join(ws.HugoRoot, "themes", "LoveIt", "layouts", "_partials"), "head.html", []byte(`{{/* https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css */}}`))
+
+	svc, err := sri.NewService(sri.Config{
+		Enabled:           true,
+		TriggerHooksOnFix: true,
+		DryRunDefault:     true,
+		MaxFileBytes:      1 << 20,
+		MaxFiles:          256,
+		HugoRoot:          ws.HugoRoot,
+		SiteBaseURL:       "https://example.com",
+		AllowedCDNHosts:   []string{"cdn.jsdelivr.net", "fastly.jsdelivr.net", "data.jsdelivr.com"},
+		ScanRoots:         []string{"public", "themes/LoveIt/layouts", "content"},
+	}, sri.WithHTTPClient(&http.Client{Transport: roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+		switch {
+		case req.URL.Host == "data.jsdelivr.com":
+			return jsonResponse(`{"tags":{"latest":"4.1.1"}}`), nil
+		case req.URL.String() == "https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css":
+			return bodyResponse("animate-ok"), nil
+		default:
+			return bodyResponse("animate-ok"), nil
+		}
+	})}))
+	if err != nil {
+		t.Fatalf("NewService() error = %v", err)
+	}
+
+	deps := newMutationDepsWithWorkspace(t, ws, &fakeBuildRunner{})
+	deps.Sri = svc
+	return deps
+}
+
+func hashForTool(body []byte) string {
+	sum := sha256.Sum256(body)
+	return base64.StdEncoding.EncodeToString(sum[:])
+}
+
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func mustWrite(t *testing.T, dir, name string, data []byte) {
+	t.Helper()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("MkdirAll(%s) error = %v", dir, err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, name), data, 0o644); err != nil {
+		t.Fatalf("WriteFile(%s/%s) error = %v", dir, name, err)
+	}
+}
+
+func jsonResponse(body string) *http.Response {
+	return &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(strings.NewReader(body)),
+		Header:     make(http.Header),
+	}
+}
+
+func bodyResponse(body string) *http.Response {
+	return &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(strings.NewReader(body)),
+		Header:     make(http.Header),
 	}
 }
 

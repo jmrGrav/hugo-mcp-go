@@ -20,7 +20,7 @@ func TestParityHelperBranches(t *testing.T) {
 	t.Run("check sri canceled context", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
-		if _, err := checkSriVersions(ctx, checkSriVersionsInput{}); err == nil {
+		if _, err := checkSriVersions(ctx, Deps{}, checkSriVersionsInput{}); err == nil {
 			t.Fatal("checkSriVersions() expected context error")
 		}
 	})

@@ -156,6 +156,58 @@ func TestGetPageRejectsOversizedFile(t *testing.T) {
 	}
 }
 
+func TestListPagesPagination(t *testing.T) {
+	svc := New(filepath.Join("..", "..", "..", "testdata", "fixtures", "minimal-site", "content"))
+
+	first, err := svc.List(context.Background(), ListRequest{Limit: 1})
+	if err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+	if len(first.Pages) != 1 {
+		t.Fatalf("List() len = %d want 1", len(first.Pages))
+	}
+	if first.NextCursor == "" {
+		t.Fatal("List() expected next cursor")
+	}
+	if !first.HasMore {
+		t.Fatal("List() expected HasMore=true")
+	}
+
+	second, err := svc.List(context.Background(), ListRequest{Limit: 1, Cursor: first.NextCursor})
+	if err != nil {
+		t.Fatalf("List(cursor) error = %v", err)
+	}
+	if len(second.Pages) == 0 {
+		t.Fatal("List(cursor) returned no pages")
+	}
+	if second.Pages[0].File == first.Pages[0].File {
+		t.Fatalf("List(cursor) returned duplicate page %q", second.Pages[0].File)
+	}
+}
+
+func TestGetPageChunkSuggestsChunking(t *testing.T) {
+	root := t.TempDir()
+	content := filepath.Join(root, "content")
+	if err := os.MkdirAll(filepath.Join(content, "posts", "big"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	raw := make([]byte, 0, 128)
+	raw = append(raw, []byte("---\ntitle: big\n---\n")...)
+	raw = append(raw, []byte(strings.Repeat("x", 64))...)
+	if err := os.WriteFile(filepath.Join(content, "posts", "big", "index.fr.md"), raw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	svc := New(content)
+	svc.MaxPageBytes = 32
+	_, err := svc.Get(context.Background(), GetRequest{Route: "/posts/big", Lang: "fr"})
+	if err == nil {
+		t.Fatal("Get() expected oversized file error")
+	}
+	if !strings.Contains(err.Error(), "get_page_chunk") {
+		t.Fatalf("Get() error = %q want chunk suggestion", err.Error())
+	}
+}
+
 func TestListPagesCanceledContext(t *testing.T) {
 	svc := New(filepath.Join("..", "..", "..", "testdata", "fixtures", "minimal-site", "content"))
 	ctx, cancel := context.WithCancel(context.Background())

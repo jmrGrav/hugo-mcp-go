@@ -15,36 +15,29 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/jmrGrav/hugo-mcp-go/internal/hugo/mutations"
 	"github.com/jmrGrav/hugo-mcp-go/internal/hugo/pages"
 	"github.com/jmrGrav/hugo-mcp-go/internal/hugo/staging"
+	"github.com/jmrGrav/hugo-mcp-go/internal/sri"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/math/fixed"
 )
 
 type checkSriVersionsInput struct {
-	AutoFix bool `json:"auto_fix,omitempty"`
-	DryRun  bool `json:"dry_run,omitempty"`
+	AutoFix *bool `json:"auto_fix,omitempty"`
+	DryRun  *bool `json:"dry_run,omitempty"`
 }
 
-type checkSriVersionsOutput struct {
-	Status     string `json:"status"`
-	Message    string `json:"message,omitempty"`
-	AutoFix    bool   `json:"auto_fix,omitempty"`
-	DryRun     bool   `json:"dry_run,omitempty"`
-	DurationMS int64  `json:"duration_ms"`
-	Results    []any  `json:"results,omitempty"`
-}
+type checkSriVersionsOutput = sri.Result
 
 type generateFeaturedImageInput struct {
 	Style    string   `json:"style,omitempty"`
 	Title    string   `json:"title"`
 	Subtitle string   `json:"subtitle,omitempty"`
 	Tags     []string `json:"tags,omitempty"`
-	Accent   string   `json:"accent,omitempty"`
+	Accent   string   `json:"accent,omitempty" jsonschema:"hex accent color like #7aa2f7"`
 	Slug     string   `json:"slug"`
 	Route    string   `json:"route,omitempty"`
 	Lang     string   `json:"lang,omitempty"`
@@ -64,20 +57,44 @@ type generateFeaturedImageOutput struct {
 var featuredImageSlugRE = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
 var featuredImageAccentRE = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 
-func checkSriVersions(ctx context.Context, in checkSriVersionsInput) (checkSriVersionsOutput, error) {
-	start := time.Now()
+func checkSriVersions(ctx context.Context, deps Deps, in checkSriVersionsInput) (checkSriVersionsOutput, error) {
 	if err := ctx.Err(); err != nil {
 		return checkSriVersionsOutput{}, err
 	}
+	if deps.Sri == nil {
+		dryRun := boolValueDefault(in.DryRun, true)
+		return checkSriVersionsOutput{
+			Plugin:           "sri-check",
+			Success:          false,
+			ExitCode:         2,
+			AutoFixRequested: boolValue(in.AutoFix),
+			DryRun:           dryRun,
+			Report: sri.Report{
+				Exit:    2,
+				Summary: "DISABLED",
+				AutoFix: sri.AutoFixReport{
+					Skipped: true,
+				},
+				Incident: sri.IncidentReport{Resolved: []string{}},
+				DryRun:   dryRun,
+			},
+		}, nil
+	}
+	return deps.Sri.Check(ctx, sri.Request{
+		AutoFix: in.AutoFix,
+		DryRun:  in.DryRun,
+	})
+}
 
-	_ = in.AutoFix
-	_ = in.DryRun
+func boolValue(v *bool) bool {
+	return v != nil && *v
+}
 
-	return checkSriVersionsOutput{
-		Status:     "no_handlers",
-		Message:    "No plugin registered for audit_type=sri_check (check plugins.yaml).",
-		DurationMS: time.Since(start).Milliseconds(),
-	}, nil
+func boolValueDefault(v *bool, fallback bool) bool {
+	if v == nil {
+		return fallback
+	}
+	return *v
 }
 
 func generateFeaturedImage(ctx context.Context, deps Deps, in generateFeaturedImageInput) (generateFeaturedImageOutput, error) {

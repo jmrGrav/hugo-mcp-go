@@ -7,6 +7,7 @@
 - purge Cloudflare cache after relevant mutations
 - notify Google Indexing
 - submit URLs to IndexNow
+- trigger the hook pipeline after SRI autofix when enabled
 - keep secrets file-backed
 - keep operational state in SQLite only
 - default to dry-run

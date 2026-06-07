@@ -295,8 +295,17 @@ run_endpoint() {
 
   read -r status resp_file < <(call_rpc "$url" "$token" '{"jsonrpc":"2.0","id":13,"method":"tools/call","params":{"name":"check_sri_versions","arguments":{"auto_fix":false,"dry_run":true}}}')
   assert_status "$status" 200 "$label check_sri_versions"
-  if [[ "$(json_path "$resp_file" 'result.content.0.text')" != *'"status":"no_handlers"'* ]]; then
-    printf '%s: check_sri_versions did not return no_handlers\n' "$label" >&2
+  sri_text="$(json_path "$resp_file" 'result.content.0.text')"
+  if [[ "$sri_text" != *'"plugin":"sri-check"'* ]]; then
+    printf '%s: check_sri_versions missing sri-check plugin marker\n' "$label" >&2
+    exit 1
+  fi
+  if [[ "$sri_text" == *'"status":"no_handlers"'* ]]; then
+    printf '%s: check_sri_versions still looks like the historical stub\n' "$label" >&2
+    exit 1
+  fi
+  if [[ "$sri_text" != *'"dry_run":true'* ]]; then
+    printf '%s: check_sri_versions did not echo dry_run=true\n' "$label" >&2
     exit 1
   fi
 
@@ -334,9 +343,12 @@ run_endpoint() {
 }
 
 main() {
-  local runtime_url="${MCP_URL:-http://127.0.0.1:8086/mcp}"
+  local runtime_url="${MCP_URL:-http://127.0.0.1:18182/mcp}"
   local runtime_token
-  runtime_token="$(load_token "${MCP_TOKEN:-}" "${MCP_TOKEN_FILE:-/tmp/live_runtime_access_token}")"
+  runtime_token="$(load_token "${MCP_TOKEN:-}" "${MCP_TOKEN_FILE:-}")" || {
+    printf 'MCP_TOKEN or MCP_TOKEN_FILE is required\n' >&2
+    exit 1
+  }
   run_endpoint "runtime" "$runtime_url" "$runtime_token"
 
   if [[ -n "${SHIM_URL:-}" || -n "${SHIM_TOKEN:-}" || -n "${SHIM_TOKEN_FILE:-}" ]]; then

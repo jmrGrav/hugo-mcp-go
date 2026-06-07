@@ -13,17 +13,18 @@ import (
 	"github.com/jmrGrav/hugo-mcp-go/internal/hugo/pages"
 	"github.com/jmrGrav/hugo-mcp-go/internal/hugo/staging"
 	"github.com/jmrGrav/hugo-mcp-go/internal/runner"
+	"github.com/jmrGrav/hugo-mcp-go/internal/sri"
 	"github.com/jmrGrav/hugo-mcp-go/internal/tools"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 const (
-	Name    = "hugo-mcp-go"
-	Version = "0.1.0"
+	Name    = "hugo-mcp"
+	Version = "1.0.0"
 )
 
 type Service struct {
-	server    *mcp.Server
+	server     *mcp.Server
 	hooksStore *hooks.Store
 }
 
@@ -65,17 +66,26 @@ func New(cfg config.Config) (*Service, error) {
 		hooks.NewGoogleIndexingClient(hookCfg, nil),
 		hooks.NewIndexNowClient(hookCfg, nil),
 	)
+	sriCfg, err := sri.LoadConfigFromEnv(validated.HugoRoot, hookCfg.SiteBaseURL)
+	if err != nil {
+		return nil, err
+	}
+	sriSvc, err := sri.NewService(sriCfg, sri.WithHooks(hookPipeline), sri.WithBuilder(buildSvc))
+	if err != nil {
+		return nil, err
+	}
 	s := mcp.NewServer(&mcp.Implementation{Name: Name, Version: Version}, nil)
 	tools.Register(s, tools.Deps{
-		Pages:          pagesSvc,
-		Assets:         assetsSvc,
-		PageMutations:  pageMutations,
-		AssetMutations: assetMutations,
-		Build:          buildSvc,
-		Hooks:          hookPipeline,
-		HooksStore:     hookStore,
+		Pages:             pagesSvc,
+		Assets:            assetsSvc,
+		PageMutations:     pageMutations,
+		AssetMutations:    assetMutations,
+		Build:             buildSvc,
+		Sri:               sriSvc,
+		Hooks:             hookPipeline,
+		HooksStore:        hookStore,
 		HooksAdminEnabled: hookCfg.HooksAdminEnabled,
-		SiteBaseURL:    hookCfg.SiteBaseURL,
+		SiteBaseURL:       hookCfg.SiteBaseURL,
 	})
 	return &Service{server: s, hooksStore: hookStore}, nil
 }

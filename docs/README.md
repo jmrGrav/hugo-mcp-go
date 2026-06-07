@@ -2,20 +2,27 @@
 
 Current operational status:
 
-- Claude reload compatible: `yes`
-- protocol blockers: `fixed`
-- live path: `Go active`
+- live path: `native HTTP active`
 - rollback: `ready`
-- Python backend: `available`
+- Python backend: `available for rollback`
+- shim backend: `available for rollback`
+- Claude validation: `passed`
+- Claude refresh banner: `known issue documented`
 - smoke/coverage: `validated`
+- SRI plugin parity: `native Go`
 
 Read in this order:
 
 1. [`LIVE_CUTOVER_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/LIVE_CUTOVER_REPORT.md)
 1. [`LIVE_ROLLBACK.md`](/home/jm/Documents/hugo-mcp-go/docs/LIVE_ROLLBACK.md)
+1. [`ABOUT.md`](ABOUT.md)
+1. [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md)
+1. [`releases/v0.1.0.md`](releases/v0.1.0.md)
 1. [`NEXT_V1_READINESS_PLAN.md`](/home/jm/Documents/hugo-mcp-go/docs/NEXT_V1_READINESS_PLAN.md)
 1. [`SMOKE_TEST_AND_COVERAGE_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/SMOKE_TEST_AND_COVERAGE_REPORT.md)
 1. [`COVERAGE_PUSH_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/COVERAGE_PUSH_REPORT.md)
+1. [`SRI_CHECK_NATIVE_IMPLEMENTATION_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/SRI_CHECK_NATIVE_IMPLEMENTATION_REPORT.md)
+1. [`SRI_CHECK_ORACLE_AUDIT.md`](/home/jm/Documents/hugo-mcp-go/docs/SRI_CHECK_ORACLE_AUDIT.md)
 1. [`HOOKS_HARDENING_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/HOOKS_HARDENING_REPORT.md)
 1. [`FULL_TOOL_PARITY_AND_HOOKS_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/FULL_TOOL_PARITY_AND_HOOKS_REPORT.md)
 1. [`TOOL_CATALOG_PARITY_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/TOOL_CATALOG_PARITY_REPORT.md)
