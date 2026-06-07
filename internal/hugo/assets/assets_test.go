@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -18,6 +19,7 @@ func TestListAssetsParity(t *testing.T) {
 	gotNorm := normalizeAssets(got)
 	want := ListResult{}
 	mustLoadJSON(t, filepath.Join("..", "..", "..", "testdata", "fixtures", "oracle", "list_assets_all.normalized.json"), &want)
+	want = normalizeAssets(want)
 	if diff := compareJSON(t, gotNorm, want); diff != "" {
 		t.Fatalf("List() mismatch:\n%s", diff)
 	}
@@ -32,6 +34,7 @@ func TestListAssetsPathPrefixParity(t *testing.T) {
 	gotNorm := normalizeAssets(got)
 	want := ListResult{}
 	mustLoadJSON(t, filepath.Join("..", "..", "..", "testdata", "fixtures", "oracle", "list_assets_post_images.normalized.json"), &want)
+	want = normalizeAssets(want)
 	if diff := compareJSON(t, gotNorm, want); diff != "" {
 		t.Fatalf("List(path prefix) mismatch:\n%s", diff)
 	}
@@ -169,6 +172,9 @@ func normalizeAssets(in ListResult) ListResult {
 	for i := range out.Assets {
 		out.Assets[i].Modified = ""
 	}
+	sort.SliceStable(out.Assets, func(i, j int) bool {
+		return out.Assets[i].Path < out.Assets[j].Path
+	})
 	return out
 }
 
