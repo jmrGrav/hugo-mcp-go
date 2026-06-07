@@ -129,7 +129,7 @@ Rollback remains unchanged:
 - SSE/streaming backend capability: yes, optional
 - chunking/pagination for large content: yes
 - stdio preserved: yes
-- shim still on active path: no, the active path is native HTTP
+- shim still on active path: no, the shim is rollback-only and the active path is native HTTP
 - compatible with current `mcp-runtime-go` contract: yes for `/mcp`
 - rollback ready: yes
 - direct native smoke on VM/host path: yes

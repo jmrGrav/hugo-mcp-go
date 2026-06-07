@@ -123,7 +123,7 @@ Examples from `tools/list` on the native backend after redeploy:
 - root cause: not proven server-side; the VM backend refreshed successfully, so the visible error is more consistent with a Claude-side refresh/state problem than with a Go backend failure
 - action taken: captured host, VM, and proxy logs; no code changes; no rollback
 - next action: retry the refresh from the authorized Claude client and, if it fails again, capture the exact click time plus any browser/network console evidence
-- catalog note: live Go/shim catalog exposes 12 tools, live Python exposes 10 tools, and the missing Python-era tools are `get_page_chunk` and `get_asset_chunk`
+- catalog note: live native Go backend and VM shim expose 12 tools, live Python exposes 10 tools, and the missing Python-era tools are `get_page_chunk` and `get_asset_chunk`
 - permissions note: the live Go/shim catalog captures in this session did not expose MCP `title` or `annotations`; the repo now adds those hints, but they still need deployment before Claude can benefit from them
 - operator validation: Claude production validation reached the 11/11 controlled-tool set, including `build_site`, `generate_featured_image`, `get_page_chunk`, and `get_asset_chunk`, with no shim or Python traffic observed
 

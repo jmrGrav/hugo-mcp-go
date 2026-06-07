@@ -4,10 +4,12 @@ Date: 2026-06-07
 
 ## Status
 
-The MCP tool catalog now includes the two previously missing Python tools:
+The native MCP tool catalog now covers the historical Python-era tools and adds the two native chunk helpers:
 
 - `check_sri_versions`
 - `generate_featured_image`
+- `get_page_chunk`
+- `get_asset_chunk`
 
 `check_sri_versions` is now implemented natively in Go and no longer depends on the historical bash script at runtime.
 The live native catalog now also exposes MCP tool `title` and `annotations` metadata after redeploy.
@@ -41,11 +43,13 @@ The tool catalog is stable and deterministic. The current registration order mat
 3. `create_page`
 4. `delete_page`
 5. `generate_featured_image`
-6. `get_page`
-7. `list_assets`
-8. `list_pages`
-9. `update_page`
-10. `upload_asset`
+6. `get_asset_chunk`
+7. `get_page`
+8. `get_page_chunk`
+9. `list_assets`
+10. `list_pages`
+11. `update_page`
+12. `upload_asset`
 
 ## Validation
 
@@ -62,6 +66,7 @@ The tool catalog is stable and deterministic. The current registration order mat
 
 ## Verdict
 
-- Python tool parity complete: `yes`
-- smoke/runtime validation against the branch-local shim: `yes`
+- historical Python-era tools preserved: `yes`
+- native-only chunk helpers added: `yes`
+- smoke/runtime validation against the native HTTP backend: `yes`
 - ready for the next subsystem: `yes`

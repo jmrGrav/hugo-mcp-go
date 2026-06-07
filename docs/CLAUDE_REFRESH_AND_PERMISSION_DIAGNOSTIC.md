@@ -102,7 +102,7 @@ Mutating or destructive tools should be classified as destructive:
 - `check_sri_versions`
 - `generate_featured_image`
 
-The live catalog captures in this session did not expose these hints, which is a plausible contributor to extra approval prompts and permission churn in Claude.
+Earlier captures in this session did not expose these hints, which is a plausible contributor to the earlier approval churn. The current live native backend does expose them after redeploy.
 
 ## Stability
 
