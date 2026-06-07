@@ -11,12 +11,13 @@ Current validation evidence:
 - `go vet ./...` passes
 - `scripts/tool-parity-smoke.sh` passes against the local branch shim
 - `scripts/hooks-smoke.sh` passes
+- `internal/sri` coverage is `90.7%`
 
 ## What Was Added
 
 ### Tool Parity
 
-- `check_sri_versions`
+- `check_sri_versions` implemented natively in Go
 - `generate_featured_image`
 - MCP tool ordering updated to include the restored tools
 - smoke coverage updated to require both tools
@@ -103,10 +104,11 @@ Current validation evidence:
 
 Latest coverage run:
 
-- global coverage: `80.5%`
-- `internal/tools`: `92.7%`
+- global coverage: `81.9%`
+- `internal/tools`: `91.4%`
 - `internal/hooks`: `90.0%`
 - `internal/shim`: `90.5%`
+- `internal/sri`: `90.7%`
 
 ## Remaining Gaps
 

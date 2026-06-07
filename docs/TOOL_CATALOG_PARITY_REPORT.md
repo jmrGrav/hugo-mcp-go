@@ -9,11 +9,14 @@ The MCP tool catalog now includes the two previously missing Python tools:
 - `check_sri_versions`
 - `generate_featured_image`
 
+`check_sri_versions` is now implemented natively in Go and no longer depends on the historical bash script at runtime.
+
 ## Behavioral Notes
 
 - `check_sri_versions`
   - accepts `auto_fix` and `dry_run`
-  - returns the structured `no_handlers` response when no audit handlers are configured
+  - returns a structured `sri-check` report with `plugin`, `success`, `exit_code`, `report`, and `downstream`
+  - performs native version and SRI evaluation in Go
   - returns deterministic validation errors for invalid input types
 
 - `generate_featured_image`
@@ -43,7 +46,7 @@ The tool catalog is stable and deterministic. The current registration order mat
 - `go test ./...` passes
 - `go test -race ./...` passes
 - `go vet ./...` passes
-- `internal/tools` coverage is now `92.7%`
+- `internal/tools` coverage is now `91.4%`
 
 ## Remaining Gaps
 

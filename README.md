@@ -10,6 +10,7 @@ Current scope:
 - no production cutover
 - no integration into `mcp-runtime-go`
 - file-backed post-build hooks with SQLite operational state
+- native `check_sri_versions` parity with the historical SRI plugin
 
 Current status and documentation order:
 
@@ -25,6 +26,8 @@ Implemented tools:
 - `delete_page`
 - `upload_asset`
 - `build_site`
+- `check_sri_versions`
+- `generate_featured_image`
 
 Hook subsystem:
 

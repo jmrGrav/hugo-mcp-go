@@ -9,19 +9,21 @@ import (
 	"github.com/jmrGrav/hugo-mcp-go/internal/hugo/assets"
 	"github.com/jmrGrav/hugo-mcp-go/internal/hugo/mutations"
 	"github.com/jmrGrav/hugo-mcp-go/internal/hugo/pages"
+	"github.com/jmrGrav/hugo-mcp-go/internal/sri"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 type Deps struct {
-	Pages          *pages.Service
-	Assets         *assets.Service
-	PageMutations  *mutations.PageService
-	AssetMutations *mutations.AssetService
-	Build          *mutations.BuildService
-	Hooks          hooks.Processor
-	HooksStore     *hooks.Store
+	Pages             *pages.Service
+	Assets            *assets.Service
+	PageMutations     *mutations.PageService
+	AssetMutations    *mutations.AssetService
+	Build             *mutations.BuildService
+	Sri               *sri.Service
+	Hooks             hooks.Processor
+	HooksStore        *hooks.Store
 	HooksAdminEnabled bool
-	SiteBaseURL    string
+	SiteBaseURL       string
 }
 
 type listPagesInput struct {
@@ -217,7 +219,7 @@ func Register(s *mcp.Server, deps Deps) {
 	})
 
 	mcp.AddTool(s, &mcp.Tool{Name: "check_sri_versions", Description: "Audit SRI hashes and npm versions for CDN libraries."}, func(ctx context.Context, _ *mcp.CallToolRequest, in checkSriVersionsInput) (*mcp.CallToolResult, checkSriVersionsOutput, error) {
-		res, err := checkSriVersions(ctx, in)
+		res, err := checkSriVersions(ctx, deps, in)
 		if err != nil {
 			return nil, checkSriVersionsOutput{}, err
 		}

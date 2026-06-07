@@ -74,10 +74,11 @@ Date: 2026-06-07
 
 ## Current Snapshot
 
-- Global coverage: `80.5%`
-- `internal/tools`: `92.7%`
+- Global coverage: `81.9%`
+- `internal/tools`: `91.4%`
 - `internal/hooks`: `90.0%`
 - `internal/shim`: `90.5%`
+- `internal/sri`: `90.7%`
 - `internal/runner`: `95.5%`
 
 ## Coverage Table
@@ -103,5 +104,6 @@ Date: 2026-06-07
 
 - More useful coverage is still possible in `internal/tools`, especially around the remaining defensive branches.
 - `internal/hooks` has reached the target floor, but more branch coverage is still possible if future hook providers are added.
+- `internal/sri` has reached the target floor for the native port, with remaining gaps concentrated in helper error paths and broader repo packages.
 - The gains so far are not artificial and exercised real functionality.
 - The next meaningful cycle should target the remaining `internal/hugo/*` packages or the docs/operational surface, not more synthetic hook branches.
