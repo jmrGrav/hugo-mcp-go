@@ -137,7 +137,7 @@ func TestRegisterToolMetadataAndNilDependenciesAreComplete(t *testing.T) {
 			t.Fatalf("tool %q missing input schema", tool.Name)
 		}
 	}
-	wantOrder := []string{"build_site", "create_page", "delete_page", "get_page", "list_assets", "list_pages", "update_page", "upload_asset"}
+	wantOrder := []string{"build_site", "check_sri_versions", "create_page", "delete_page", "generate_featured_image", "get_page", "list_assets", "list_pages", "update_page", "upload_asset"}
 	if !equalStrings(gotNames, wantOrder) {
 		t.Fatalf("tool order = %#v want %#v", gotNames, wantOrder)
 	}

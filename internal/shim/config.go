@@ -23,6 +23,7 @@ type Config struct {
 	BackendToken     string
 	GoBin            string
 	GoWorkDir        string
+	ChildPath        string
 	RequestTimeoutMS int
 	StartupTimeoutMS int
 	MaxRequestBytes  int64
@@ -35,6 +36,7 @@ func LoadConfigFromEnv() (Config, error) {
 		BackendToken:     strings.TrimSpace(os.Getenv("HUGO_MCP_SHIM_BACKEND_TOKEN")),
 		GoBin:            strings.TrimSpace(os.Getenv("HUGO_MCP_GO_BIN")),
 		GoWorkDir:        strings.TrimSpace(os.Getenv("HUGO_MCP_GO_WORKDIR")),
+		ChildPath:        strings.TrimSpace(os.Getenv("HUGO_MCP_CHILD_PATH")),
 		LogLevel:         strings.TrimSpace(os.Getenv("HUGO_MCP_LOG_LEVEL")),
 		RequestTimeoutMS: DefaultRequestTimeoutMS,
 		StartupTimeoutMS: DefaultStartupTimeoutMS,

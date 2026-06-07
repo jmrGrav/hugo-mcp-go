@@ -47,11 +47,17 @@ type DeletePageRequest struct {
 }
 
 type MutationResult struct {
-	Status  string         `json:"status"`
-	File    string         `json:"file"`
-	Deploy  string         `json:"deploy"`
-	CFPurge map[string]any `json:"cf_purge"`
-	Plugins []any          `json:"plugins"`
+	Status         string         `json:"status"`
+	File           string         `json:"file"`
+	Deploy         string         `json:"deploy"`
+	CFPurge        map[string]any `json:"cf_purge"`
+	Plugins        []any          `json:"plugins"`
+	HooksEnabled   bool           `json:"hooks.enabled,omitempty"`
+	CloudflarePurge map[string]any `json:"cloudflare_purge,omitempty"`
+	GoogleIndexing map[string]any `json:"google_indexing,omitempty"`
+	IndexNow       map[string]any `json:"indexnow,omitempty"`
+	QueuedURLsCount int            `json:"queued_urls_count,omitempty"`
+	FailedJobsCount int             `json:"failed_jobs_count,omitempty"`
 }
 
 func NewPageService(ws *staging.Workspace) *PageService {

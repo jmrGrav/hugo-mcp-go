@@ -13,6 +13,7 @@ ExecStart=/srv/hugo-mcp-go/bin/hugo-mcp-go
 Restart=on-failure
 RestartSec=2
 NoNewPrivileges=yes
+StateDirectory=hugo-mcp-go
 ProtectSystem=strict
 ProtectHome=yes
 PrivateTmp=yes
@@ -26,6 +27,7 @@ UMask=0027
 StandardOutput=journal
 StandardError=journal
 ReadWritePaths=/var/lib/hugo-mcp-go
+ReadOnlyPaths=/etc/hugo-mcp-go/secrets
 IPAddressDeny=any
 RestrictAddressFamilies=AF_UNIX
 

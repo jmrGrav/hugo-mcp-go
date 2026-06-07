@@ -47,6 +47,10 @@ for raw in sys.stdin:
 	if !contains(env, "HUGO_ROOT=/var/lib/hugo-mcp-go") || !contains(env, "PATH=/usr/local/bin:/usr/bin:/bin") {
 		t.Fatalf("childEnv() missing expected values: %#v", env)
 	}
+	overrideEnv := childEnv(Config{ChildPath: "/tmp/fakebin"})
+	if !contains(overrideEnv, "PATH=/tmp/fakebin:/usr/local/bin:/usr/bin:/bin") {
+		t.Fatalf("childEnv() missing override PATH: %#v", overrideEnv)
+	}
 
 	ctx := context.Background()
 	if err := c.Bootstrap(ctx); err != nil {
