@@ -21,6 +21,7 @@ func TestLoadConfigFromEnvAndParsingHelpers(t *testing.T) {
 	t.Setenv("HUGO_MCP_SHIM_BACKEND_TOKEN", "REDACTED")
 	t.Setenv("HUGO_MCP_GO_BIN", goBin)
 	t.Setenv("HUGO_MCP_GO_WORKDIR", workDir)
+	t.Setenv("HUGO_MCP_CHILD_PATH", "/tmp/fakebin")
 	t.Setenv("HUGO_MCP_LOG_LEVEL", "debug")
 	t.Setenv("HUGO_MCP_REQUEST_TIMEOUT_MS", "1234")
 	t.Setenv("HUGO_MCP_STARTUP_TIMEOUT_MS", "4321")
@@ -32,6 +33,9 @@ func TestLoadConfigFromEnvAndParsingHelpers(t *testing.T) {
 	}
 	if cfg.RequestTimeoutMS != 1234 || cfg.StartupTimeoutMS != 4321 || cfg.MaxRequestBytes != 2048 {
 		t.Fatalf("unexpected parsed config: %#v", cfg)
+	}
+	if cfg.ChildPath != "/tmp/fakebin" {
+		t.Fatalf("unexpected child path: %#v", cfg.ChildPath)
 	}
 
 	if got, err := parseOptionalInt("MISSING_INT", 99); err != nil || got != 99 {

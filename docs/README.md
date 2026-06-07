@@ -14,6 +14,13 @@ Read in this order:
 1. [`LIVE_CUTOVER_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/LIVE_CUTOVER_REPORT.md)
 1. [`LIVE_ROLLBACK.md`](/home/jm/Documents/hugo-mcp-go/docs/LIVE_ROLLBACK.md)
 1. [`SMOKE_TEST_AND_COVERAGE_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/SMOKE_TEST_AND_COVERAGE_REPORT.md)
+1. [`COVERAGE_PUSH_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/COVERAGE_PUSH_REPORT.md)
+1. [`HOOKS_HARDENING_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/HOOKS_HARDENING_REPORT.md)
+1. [`FULL_TOOL_PARITY_AND_HOOKS_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/FULL_TOOL_PARITY_AND_HOOKS_REPORT.md)
+1. [`TOOL_CATALOG_PARITY_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/TOOL_CATALOG_PARITY_REPORT.md)
+1. [`POST_BUILD_HOOKS_IMPLEMENTATION_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/POST_BUILD_HOOKS_IMPLEMENTATION_REPORT.md)
+1. [`POST_BUILD_HOOKS.md`](/home/jm/Documents/hugo-mcp-go/docs/POST_BUILD_HOOKS.md)
+1. [`SECRETS_MODEL.md`](/home/jm/Documents/hugo-mcp-go/docs/SECRETS_MODEL.md)
 1. [`MCP_PROTOCOL_PARITY_FIX_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/MCP_PROTOCOL_PARITY_FIX_REPORT.md)
 1. [`MCP_PROTOCOL_PARITY_AUDIT.md`](/home/jm/Documents/hugo-mcp-go/docs/MCP_PROTOCOL_PARITY_AUDIT.md)
 1. [`RELEASE_VALIDATION_PIPELINE.md`](/home/jm/Documents/hugo-mcp-go/docs/RELEASE_VALIDATION_PIPELINE.md)
@@ -59,5 +66,10 @@ Notes:
 - `LIVE_CUTOVER_REPORT.md` is the current source of truth for the live Go route and the immediate validation result.
 - `LIVE_ROLLBACK.md` is the current source of truth for the instant rollback path back to Python.
 - `MCP_PROTOCOL_PARITY_FIX_REPORT.md` remains the source of truth for Claude reload and blocker history.
+- `TOOL_CATALOG_PARITY_REPORT.md` is the source of truth for the restored `check_sri_versions` and `generate_featured_image` tools.
+- `COVERAGE_PUSH_REPORT.md` records the coverage-improvement cycles for the new tool work.
+- `POST_BUILD_HOOKS_IMPLEMENTATION_REPORT.md` is the source of truth for the hook subsystem packaging and validation state.
+- `POST_BUILD_HOOKS.md` documents the runtime hook contract and operator workflow.
+- `SECRETS_MODEL.md` documents the file-backed secret handling model and permissions.
 - `MCP_PROTOCOL_PARITY_AUDIT.md` is historical and describes the pre-fix oracle gap.
 - Older canary / readiness documents may predate the live cutover and should be read as time-stamped operational records, not current verdicts.

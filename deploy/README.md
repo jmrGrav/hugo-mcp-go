@@ -8,6 +8,8 @@ These files are not installed automatically and do not change the running system
 
 - `systemd/hugo-mcp-go.service` - example hardened service unit for operations review
 - `systemd/hugo-mcp-go.env.example` - example environment file with non-secret values
+- `tmpfiles.d/hugo-mcp-go.conf` - directory layout for state and secrets paths
+- `sysusers.d/hugo-mcp-go.conf` - dedicated user/group layout
 - `validation/preflight.sh` - non-destructive validation script for deployment-time checks
 
 ## Intended Use

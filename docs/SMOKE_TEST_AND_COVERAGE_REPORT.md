@@ -4,13 +4,14 @@ Date: 2026-06-07
 
 ## Executive Summary
 
-The MCP critical paths are operational on both the local runtime and the VM shim.
+The MCP critical paths are operational on the branch-local shim and hook smoke surface.
 
-- `scripts/tool-parity-smoke.sh` passed against the runtime endpoint `http://127.0.0.1:8086/mcp`.
-- The same smoke script passed against the direct shim endpoint `http://192.168.122.69:18180/mcp`.
+- `scripts/tool-parity-smoke.sh` passed against the branch-local shim endpoint `http://127.0.0.1:18182/mcp`.
+- `scripts/hooks-smoke.sh` passed against the branch-local test surface.
 - The newly added Go packages that matter for the MCP routing path are at or above the requested 90% threshold:
-  - `internal/shim`: `90.0%`
-  - `internal/tools`: `94.8%`
+  - `internal/hooks`: `90.0%`
+  - `internal/shim`: `90.5%`
+  - `internal/tools`: `92.7%`
 - Full-repo coverage is lower because several command packages and supporting packages are intentionally under-tested or only lightly exercised.
 
 ## Validation Commands
@@ -21,6 +22,7 @@ The MCP critical paths are operational on both the local runtime and the VM shim
 - `go test -coverprofile=coverage.out ./...`
 - `go tool cover -func=coverage.out`
 - `scripts/tool-parity-smoke.sh`
+- `scripts/hooks-smoke.sh`
 
 Note: the local Go toolchain needed a `covdata` binary repair in `GOTOOLDIR` before `go test -coverprofile=coverage.out ./...` could run cleanly. That was an environment fix only; no repo code changed for it.
 
@@ -28,7 +30,7 @@ Note: the local Go toolchain needed a `covdata` binary repair in `GOTOOLDIR` bef
 
 Global coverage from `go tool cover -func=coverage.out`:
 
-- total: `75.4%`
+- total: `80.5%`
 
 Per-package coverage reported by `go test -coverprofile=coverage.out ./...`:
 
@@ -45,9 +47,9 @@ Per-package coverage reported by `go test -coverprofile=coverage.out ./...`:
 | `internal/observability` | `75.0%` |
 | `internal/runner` | `95.5%` |
 | `internal/security/pathguard` | `66.3%` |
-| `internal/server` | `74.1%` |
-| `internal/shim` | `90.0%` |
-| `internal/tools` | `94.8%` |
+| `internal/server` | `69.4%` |
+| `internal/shim` | `90.5%` |
+| `internal/tools` | `92.7%` |
 
 ## Coverage Buckets
 
@@ -74,6 +76,7 @@ Packages from `80%` to `89.9%`:
 
 Packages at or above `90%`:
 
+- `internal/hooks`
 - `internal/runner`
 - `internal/shim`
 - `internal/tools`
@@ -89,7 +92,7 @@ The new smoke script is non-destructive and is not counted as Go package coverag
 
 ## Smoke Test Results
 
-The smoke script validated the following on both runtime and shim endpoints:
+The smoke scripts validated the following on the branch-local shim and hook surfaces:
 
 - `initialize`
 - `tools/list`
@@ -108,6 +111,7 @@ The smoke script validated the following on both runtime and shim endpoints:
 - unknown method handling
 - `notifications/initialized` without `id`
 - `notifications/initialized` with `id`
+- hook enqueue / retry / status paths in dry-run mode
 
 Observed behavior:
 

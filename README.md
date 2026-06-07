@@ -9,6 +9,7 @@ Current scope:
 - no shell execution
 - no production cutover
 - no integration into `mcp-runtime-go`
+- file-backed post-build hooks with SQLite operational state
 
 Current status and documentation order:
 
@@ -25,6 +26,13 @@ Implemented tools:
 - `upload_asset`
 - `build_site`
 
+Hook subsystem:
+
+- Cloudflare purge after rebuild/update
+- Google Indexing notifications
+- IndexNow submission
+- admin hooks tools are opt-in by config
+
 ## Layout
 
 - `cmd/hugo-mcp-go/` entrypoint
@@ -35,6 +43,7 @@ Implemented tools:
 - `internal/hugo/assets/` asset discovery
 - `internal/tools/` MCP tool registration
 - `internal/server/` MCP server wiring
+- `internal/hooks/` hook pipeline, providers, and SQLite store
 - `testdata/fixtures/` oracle and minimal Hugo fixtures
 
 ## Configuration

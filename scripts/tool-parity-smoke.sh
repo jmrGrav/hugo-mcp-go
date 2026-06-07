@@ -232,18 +232,18 @@ run_endpoint() {
   printf '[%s] endpoint=%s\n' "$label" "$url"
 
   local init_body tools_body tools_resp status resp_file
-  init_body='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"roots":{"listChanged":true}},"clientInfo":{"name":"tool-parity-smoke","version":"0.1.0"}}}'
+  init_body='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{"roots":{"listChanged":true}},"clientInfo":{"name":"tool-parity-smoke","version":"0.1.0"}}}'
   read -r status resp_file < <(call_rpc "$url" "$token" "$init_body")
   assert_status "$status" 200 "$label initialize"
-  if [[ "$(json_path "$resp_file" 'result.protocolVersion')" != "2025-11-25" ]]; then
+  if [[ "$(json_path "$resp_file" 'result.protocolVersion')" != "2025-03-26" ]]; then
     printf '%s: protocolVersion mismatch\n' "$label" >&2
     exit 1
   fi
-  if [[ "$(json_path "$resp_file" 'result.serverInfo.name')" != "hugo-mcp-go" ]]; then
+  if [[ "$(json_path "$resp_file" 'result.serverInfo.name')" != "hugo-mcp" ]]; then
     printf '%s: serverInfo.name mismatch\n' "$label" >&2
     exit 1
   fi
-  if [[ "$(json_path "$resp_file" 'result.serverInfo.version')" != "0.1.0" ]]; then
+  if [[ "$(json_path "$resp_file" 'result.serverInfo.version')" != "1.0.0" ]]; then
     printf '%s: serverInfo.version mismatch\n' "$label" >&2
     exit 1
   fi
@@ -252,6 +252,9 @@ run_endpoint() {
   read -r status resp_file < <(call_rpc "$url" "$token" "$tools_body")
   assert_status "$status" 200 "$label tools/list"
   for tool in build_site create_page delete_page get_page list_assets list_pages update_page upload_asset; do
+    assert_tool_list_contains "$resp_file" "$tool"
+  done
+  for tool in check_sri_versions generate_featured_image; do
     assert_tool_list_contains "$resp_file" "$tool"
   done
 
@@ -275,7 +278,7 @@ run_endpoint() {
   assert_status "$status" 200 "$label create_page"
   assert_tool_error "$resp_file" "Conflict"
 
-  read -r status resp_file < <(call_rpc "$url" "$token" '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"update_page","arguments":{"route":"/posts/bonjour","lang":"fr","frontmatter":{"date":"2026-01-01T00:00:00Z"}}}}')
+  read -r status resp_file < <(call_rpc "$url" "$token" '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"update_page","arguments":{"route":"/posts/tool-parity-smoke-missing","lang":"fr","frontmatter":{"date":"2026-01-01T00:00:00Z"}}}}')
   assert_status "$status" 200 "$label update_page"
   assert_tool_error "$resp_file" "Page not found"
 
@@ -290,23 +293,29 @@ run_endpoint() {
     exit 1
   fi
 
-  read -r status resp_file < <(call_rpc "$url" "$token" '{"jsonrpc":"2.0","id":11,"method":"resources/list","params":{}}')
+  read -r status resp_file < <(call_rpc "$url" "$token" '{"jsonrpc":"2.0","id":13,"method":"tools/call","params":{"name":"check_sri_versions","arguments":{"auto_fix":false,"dry_run":true}}}')
+  assert_status "$status" 200 "$label check_sri_versions"
+  if [[ "$(json_path "$resp_file" 'result.content.0.text')" != *'"status":"no_handlers"'* ]]; then
+    printf '%s: check_sri_versions did not return no_handlers\n' "$label" >&2
+    exit 1
+  fi
+
+  read -r status resp_file < <(call_rpc "$url" "$token" '{"jsonrpc":"2.0","id":14,"method":"tools/call","params":{"name":"generate_featured_image","arguments":{"style":"tech","title":"Parity Tool","subtitle":"smoke","tags":["hugo","mcp"],"accent":"#7aa2f7","slug":"parity-tool-smoke","route":"/","lang":"fr"}}}')
+  assert_status "$status" 200 "$label generate_featured_image"
+  if [[ "$(json_path "$resp_file" 'result.content.0.text')" != *'"status":"ok"'* ]]; then
+    printf '%s: generate_featured_image did not return ok\n' "$label" >&2
+    exit 1
+  fi
+
+  read -r status resp_file < <(call_rpc "$url" "$token" '{"jsonrpc":"2.0","id":15,"method":"resources/list","params":{}}')
   assert_status "$status" 200 "$label resources/list"
   assert_result_list_or_error "$resp_file" "resources"
 
-  read -r status resp_file < <(call_rpc "$url" "$token" '{"jsonrpc":"2.0","id":12,"method":"prompts/list","params":{}}')
+  read -r status resp_file < <(call_rpc "$url" "$token" '{"jsonrpc":"2.0","id":16,"method":"prompts/list","params":{}}')
   assert_status "$status" 200 "$label prompts/list"
   assert_result_list_or_error "$resp_file" "prompts"
 
-  read -r status resp_file < <(call_rpc "$url" "$token" '{"jsonrpc":"2.0","id":13,"method":"check_sri_versions","params":{}}')
-  assert_status "$status" 200 "$label check_sri_versions"
-  assert_unsupported_error "$resp_file" "check_sri_versions"
-
-  read -r status resp_file < <(call_rpc "$url" "$token" '{"jsonrpc":"2.0","id":14,"method":"generate_featured_image","params":{}}')
-  assert_status "$status" 200 "$label generate_featured_image"
-  assert_unsupported_error "$resp_file" "generate_featured_image"
-
-  read -r status resp_file < <(call_rpc "$url" "$token" '{"jsonrpc":"2.0","id":15,"method":"does/not_exist","params":{}}')
+  read -r status resp_file < <(call_rpc "$url" "$token" '{"jsonrpc":"2.0","id":17,"method":"does/not_exist","params":{}}')
   assert_status "$status" 200 "$label unknown method"
   assert_unsupported_error "$resp_file" "does/not_exist"
 

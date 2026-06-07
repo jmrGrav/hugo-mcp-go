@@ -23,11 +23,17 @@ type UploadAssetRequest struct {
 }
 
 type UploadAssetResult struct {
-	Status    string `json:"status"`
-	Path      string `json:"path"`
-	PublicURL string `json:"public_url"`
-	SizeBytes int    `json:"size_bytes"`
-	Deploy    string `json:"deploy"`
+	Status          string         `json:"status"`
+	Path            string         `json:"path"`
+	PublicURL       string         `json:"public_url"`
+	SizeBytes       int            `json:"size_bytes"`
+	Deploy          string         `json:"deploy"`
+	HooksEnabled    bool           `json:"hooks.enabled,omitempty"`
+	CloudflarePurge map[string]any `json:"cloudflare_purge,omitempty"`
+	GoogleIndexing  map[string]any `json:"google_indexing,omitempty"`
+	IndexNow        map[string]any `json:"indexnow,omitempty"`
+	QueuedURLsCount int             `json:"queued_urls_count,omitempty"`
+	FailedJobsCount int             `json:"failed_jobs_count,omitempty"`
 }
 
 func NewAssetService(ws *staging.Workspace) *AssetService {

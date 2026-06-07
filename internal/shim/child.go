@@ -19,6 +19,10 @@ import (
 )
 
 func childEnv(cfg Config) []string {
+	path := "/usr/local/bin:/usr/bin:/bin"
+	if strings.TrimSpace(cfg.ChildPath) != "" {
+		path = strings.TrimSpace(cfg.ChildPath) + ":" + path
+	}
 	return []string{
 		"HUGO_ROOT=/var/lib/hugo-mcp-go",
 		"HUGO_CONTENT_ROOT=/var/lib/hugo-mcp-go/content",
@@ -29,7 +33,7 @@ func childEnv(cfg Config) []string {
 		"HUGO_MAX_ASSET_BYTES=26214400",
 		"HUGO_MAX_LIST_PAGES=500",
 		"HUGO_MAX_LIST_ASSETS=500",
-		"PATH=/usr/local/bin:/usr/bin:/bin",
+		"PATH=" + path,
 	}
 }
 

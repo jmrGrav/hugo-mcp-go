@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/jmrGrav/hugo-mcp-go/internal/config"
+	"github.com/jmrGrav/hugo-mcp-go/internal/hooks"
 	"github.com/jmrGrav/hugo-mcp-go/internal/hugo/assets"
 	"github.com/jmrGrav/hugo-mcp-go/internal/hugo/mutations"
 	"github.com/jmrGrav/hugo-mcp-go/internal/hugo/pages"
@@ -22,7 +23,8 @@ const (
 )
 
 type Service struct {
-	server *mcp.Server
+	server    *mcp.Server
+	hooksStore *hooks.Store
 }
 
 func New(cfg config.Config) (*Service, error) {
@@ -50,6 +52,19 @@ func New(cfg config.Config) (*Service, error) {
 	assetMutations := mutations.NewAssetService(ws)
 	assetMutations.MaxUploadBytes = validated.MaxAssetBytes
 	buildSvc := mutations.NewBuildService(ws, runner.ExecRunner{})
+	hookCfg, err := hooks.LoadConfigFromEnv()
+	if err != nil {
+		return nil, err
+	}
+	hookStore, err := hooks.OpenStore(hookCfg.HooksDB)
+	if err != nil {
+		return nil, err
+	}
+	hookPipeline := hooks.NewPipeline(hookCfg, hookStore,
+		hooks.NewCloudflareClient(hookCfg, nil),
+		hooks.NewGoogleIndexingClient(hookCfg, nil),
+		hooks.NewIndexNowClient(hookCfg, nil),
+	)
 	s := mcp.NewServer(&mcp.Implementation{Name: Name, Version: Version}, nil)
 	tools.Register(s, tools.Deps{
 		Pages:          pagesSvc,
@@ -57,13 +72,20 @@ func New(cfg config.Config) (*Service, error) {
 		PageMutations:  pageMutations,
 		AssetMutations: assetMutations,
 		Build:          buildSvc,
+		Hooks:          hookPipeline,
+		HooksStore:     hookStore,
+		HooksAdminEnabled: hookCfg.HooksAdminEnabled,
+		SiteBaseURL:    hookCfg.SiteBaseURL,
 	})
-	return &Service{server: s}, nil
+	return &Service{server: s, hooksStore: hookStore}, nil
 }
 
 func (s *Service) RunStdio(ctx context.Context) error {
 	if s == nil || s.server == nil {
 		return fmt.Errorf("server not initialized")
+	}
+	if s.hooksStore != nil {
+		defer s.hooksStore.Close()
 	}
 	return s.server.Run(ctx, &mcp.StdioTransport{})
 }
