@@ -4,11 +4,16 @@ Current operational status:
 
 - Claude reload compatible: `yes`
 - protocol blockers: `fixed`
-- canary: `possible, observation only`
-- cutover: `no`
+- live path: `Go active`
+- rollback: `ready`
+- Python backend: `available`
+- smoke/coverage: `validated`
 
 Read in this order:
 
+1. [`LIVE_CUTOVER_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/LIVE_CUTOVER_REPORT.md)
+1. [`LIVE_ROLLBACK.md`](/home/jm/Documents/hugo-mcp-go/docs/LIVE_ROLLBACK.md)
+1. [`SMOKE_TEST_AND_COVERAGE_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/SMOKE_TEST_AND_COVERAGE_REPORT.md)
 1. [`MCP_PROTOCOL_PARITY_FIX_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/MCP_PROTOCOL_PARITY_FIX_REPORT.md)
 1. [`MCP_PROTOCOL_PARITY_AUDIT.md`](/home/jm/Documents/hugo-mcp-go/docs/MCP_PROTOCOL_PARITY_AUDIT.md)
 1. [`RELEASE_VALIDATION_PIPELINE.md`](/home/jm/Documents/hugo-mcp-go/docs/RELEASE_VALIDATION_PIPELINE.md)
@@ -51,6 +56,8 @@ Read in this order:
 
 Notes:
 
-- `MCP_PROTOCOL_PARITY_FIX_REPORT.md` is the current source of truth for Claude reload and blocker status.
+- `LIVE_CUTOVER_REPORT.md` is the current source of truth for the live Go route and the immediate validation result.
+- `LIVE_ROLLBACK.md` is the current source of truth for the instant rollback path back to Python.
+- `MCP_PROTOCOL_PARITY_FIX_REPORT.md` remains the source of truth for Claude reload and blocker history.
 - `MCP_PROTOCOL_PARITY_AUDIT.md` is historical and describes the pre-fix oracle gap.
-- Older canary / readiness documents may predate the parity fix and should be read as time-stamped operational records, not current verdicts.
+- Older canary / readiness documents may predate the live cutover and should be read as time-stamped operational records, not current verdicts.

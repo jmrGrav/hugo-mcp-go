@@ -3,6 +3,8 @@ package shim
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -10,22 +12,24 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jmrGrav/hugo-mcp-go/internal/observability"
 )
 
 type fakeChild struct {
-	gen        uint64
-	bootstraps int
-	sendFunc   func(context.Context, *RPCRequest) ([]byte, error)
-	closed     int
+	gen          uint64
+	bootstraps   int
+	bootstrapErr error
+	sendFunc     func(context.Context, *RPCRequest) ([]byte, error)
+	closed       int
 }
 
 func (f *fakeChild) Generation() uint64 { return f.gen }
 
 func (f *fakeChild) Bootstrap(context.Context) error {
 	f.bootstraps++
-	return nil
+	return f.bootstrapErr
 }
 
 func (f *fakeChild) Send(ctx context.Context, req *RPCRequest) ([]byte, error) {
@@ -315,6 +319,35 @@ func TestHTTPChildUnavailableAndTimeout(t *testing.T) {
 	}
 }
 
+func TestHTTPBootstrapFailureAndInvalidChildResponse(t *testing.T) {
+	child := &fakeChild{
+		bootstrapErr: errors.New("backend unavailable: down"),
+	}
+	srv, _ := testServer(t, child, 1024)
+
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer REDACTED")
+	rr := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want 503", rr.Code)
+	}
+
+	child.bootstrapErr = nil
+	child.sendFunc = func(ctx context.Context, req *RPCRequest) ([]byte, error) {
+		return []byte("not-json"), nil
+	}
+	req = httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer REDACTED")
+	rr = httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusBadGateway {
+		t.Fatalf("status = %d, want 502", rr.Code)
+	}
+}
+
 func TestHTTPChildRestartAndLogs(t *testing.T) {
 	callCount := 0
 	child := &fakeChild{
@@ -377,6 +410,201 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	}
 	if cfg.BindAddr != "192.168.122.69" || cfg.BindPort != 18180 {
 		t.Fatalf("unexpected config: %#v", cfg)
+	}
+}
+
+func TestServerHelpersAndConstruction(t *testing.T) {
+	srv, _ := testServer(t, &fakeChild{}, 1024)
+
+	if !srv.authorize("Bearer REDACTED") {
+		t.Fatal("authorize() rejected valid token")
+	}
+	if srv.authorize("Bearer wrong") {
+		t.Fatal("authorize() accepted invalid token")
+	}
+
+	srv.queue = make(chan struct{}, 1)
+	if !srv.acquire() {
+		t.Fatal("acquire() failed")
+	}
+	if srv.acquire() {
+		t.Fatal("acquire() unexpectedly allowed overflow")
+	}
+	srv.release()
+
+	if got := translateChildStatus(context.DeadlineExceeded); got != http.StatusGatewayTimeout {
+		t.Fatalf("translateChildStatus(deadline) = %d", got)
+	}
+	if got := translateChildStatus(io.EOF); got != http.StatusBadGateway {
+		t.Fatalf("translateChildStatus(eof) = %d", got)
+	}
+	if got := translateChildStatus(nil); got != http.StatusOK {
+		t.Fatalf("translateChildStatus(nil) = %d", got)
+	}
+
+	initResp := fixedInitializeResponse(nil)
+	if initResp["id"] != nil {
+		t.Fatalf("fixedInitializeResponse(nil) id = %#v", initResp["id"])
+	}
+	encoded, err := json.Marshal(initResp)
+	if err != nil {
+		t.Fatalf("marshal init response: %v", err)
+	}
+	if !strings.Contains(string(encoded), `"protocolVersion":"2025-03-26"`) {
+		t.Fatalf("fixedInitializeResponse missing protocolVersion: %s", string(encoded))
+	}
+
+	rr := httptest.NewRecorder()
+	if n := writeJSON(rr, map[string]any{"ok": true}); n == 0 {
+		t.Fatal("writeJSON() wrote zero bytes")
+	}
+	if rr.Code != http.StatusOK {
+		t.Fatalf("writeJSON() status = %d", rr.Code)
+	}
+
+	for _, tc := range []struct {
+		name string
+		err  error
+		want int
+	}{
+		{name: "backend unavailable", err: errors.New("backend unavailable: down"), want: http.StatusServiceUnavailable},
+		{name: "child stopped", err: errors.New("child stopped"), want: http.StatusServiceUnavailable},
+		{name: "overloaded", err: errors.New("overloaded"), want: http.StatusTooManyRequests},
+		{name: "write child", err: errors.New("write child request: boom"), want: http.StatusBadGateway},
+		{name: "default", err: errors.New("unexpected"), want: http.StatusBadGateway},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := translateChildStatus(tc.err); got != tc.want {
+				t.Fatalf("translateChildStatus(%v) = %d want %d", tc.err, got, tc.want)
+			}
+		})
+	}
+
+	for _, tc := range []struct {
+		name string
+		raw  json.RawMessage
+		want string
+	}{
+		{name: "notification", raw: nil, want: "notification"},
+		{name: "null", raw: json.RawMessage(`null`), want: "null"},
+		{name: "string", raw: json.RawMessage(`"abc"`), want: "string"},
+		{name: "number", raw: json.RawMessage(`1`), want: "number"},
+		{name: "other", raw: json.RawMessage(`true`), want: "other"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := detectIDType(tc.raw); got != tc.want {
+				t.Fatalf("detectIDType(%s) = %q want %q", string(tc.raw), got, tc.want)
+			}
+		})
+	}
+
+	errRR := httptest.NewRecorder()
+	if n := writeJSON(errRR, map[string]any{"bad": make(chan int)}); n != 0 {
+		t.Fatalf("writeJSON(error) wrote %d bytes want 0", n)
+	}
+	if errRR.Code != http.StatusInternalServerError {
+		t.Fatalf("writeJSON(error) status = %d want 500", errRR.Code)
+	}
+}
+
+func TestNewServerNilLoggerAndClose(t *testing.T) {
+	root := t.TempDir()
+	goBin := root + "/hugo-mcp-go"
+	if err := os.WriteFile(goBin, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatalf("write go bin stub: %v", err)
+	}
+	workDir := root + "/work"
+	if err := os.MkdirAll(workDir, 0o755); err != nil {
+		t.Fatalf("mkdir workdir: %v", err)
+	}
+	cfg := Config{
+		BindAddr:         "127.0.0.1",
+		BindPort:         18180,
+		BackendToken:     "REDACTED",
+		GoBin:            goBin,
+		GoWorkDir:        workDir,
+		RequestTimeoutMS: 100,
+		StartupTimeoutMS: 100,
+		MaxRequestBytes:  1024,
+		LogLevel:         "info",
+	}
+	svc, err := NewServer(cfg, nil)
+	if err != nil {
+		t.Fatalf("NewServer() error = %v", err)
+	}
+	if svc == nil {
+		t.Fatal("NewServer() returned nil server")
+	}
+	if err := svc.Close(context.Background()); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+}
+
+func TestNewServerRejectsInvalidConfig(t *testing.T) {
+	srv, err := NewServer(Config{}, nil)
+	if err == nil {
+		t.Fatal("NewServer() expected config error")
+	}
+	if srv != nil {
+		t.Fatalf("NewServer() returned unexpected server: %#v", srv)
+	}
+}
+
+func TestServerCloseWithHTTPServer(t *testing.T) {
+	root := t.TempDir()
+	goBin := root + "/hugo-mcp-go"
+	if err := os.WriteFile(goBin, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatalf("write go bin stub: %v", err)
+	}
+	workDir := root + "/work"
+	if err := os.MkdirAll(workDir, 0o755); err != nil {
+		t.Fatalf("mkdir workdir: %v", err)
+	}
+	cfg := Config{
+		BindAddr:         "127.0.0.1",
+		BindPort:         18180,
+		BackendToken:     "REDACTED",
+		GoBin:            goBin,
+		GoWorkDir:        workDir,
+		RequestTimeoutMS: 100,
+		StartupTimeoutMS: 100,
+		MaxRequestBytes:  1024,
+		LogLevel:         "info",
+	}
+	srv, err := NewServer(cfg, nil)
+	if err != nil {
+		t.Fatalf("NewServer() error = %v", err)
+	}
+	srv.server = &http.Server{Addr: "127.0.0.1:0"}
+	if err := srv.Close(context.Background()); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+}
+
+func TestListenAndServeShutdown(t *testing.T) {
+	srv := &Server{
+		cfg: Config{
+			BindAddr: "127.0.0.1",
+			BindPort: 0,
+		},
+		child: &fakeChild{},
+		log:   slog.New(slog.NewTextHandler(io.Discard, nil)),
+	}
+	done := make(chan error, 1)
+	go func() {
+		done <- srv.ListenAndServe()
+	}()
+	time.Sleep(50 * time.Millisecond)
+	if err := srv.Close(context.Background()); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+	select {
+	case err := <-done:
+		if err != nil && !strings.Contains(err.Error(), "Server closed") && !strings.Contains(err.Error(), "closed network connection") {
+			t.Fatalf("ListenAndServe() error = %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("ListenAndServe() did not exit")
 	}
 }
 

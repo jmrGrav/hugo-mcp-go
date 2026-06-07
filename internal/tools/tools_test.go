@@ -119,6 +119,91 @@ func TestRegisterMutationToolErrorPaths(t *testing.T) {
 	}
 }
 
+func TestRegisterToolMetadataAndNilDependenciesAreComplete(t *testing.T) {
+	session, ctx := mustNewMutationSession(t, Deps{})
+	defer session.Close()
+
+	toolsRes, err := session.ListTools(ctx, nil)
+	if err != nil {
+		t.Fatalf("ListTools() error = %v", err)
+	}
+	gotNames := make([]string, 0, len(toolsRes.Tools))
+	for _, tool := range toolsRes.Tools {
+		gotNames = append(gotNames, tool.Name)
+		if tool.Description == "" {
+			t.Fatalf("tool %q missing description", tool.Name)
+		}
+		if tool.InputSchema == nil {
+			t.Fatalf("tool %q missing input schema", tool.Name)
+		}
+	}
+	wantOrder := []string{"build_site", "create_page", "delete_page", "get_page", "list_assets", "list_pages", "update_page", "upload_asset"}
+	if !equalStrings(gotNames, wantOrder) {
+		t.Fatalf("tool order = %#v want %#v", gotNames, wantOrder)
+	}
+
+	cases := []struct {
+		tool    string
+		args    map[string]any
+		wantSub string
+	}{
+		{tool: "update_page", args: map[string]any{"route": "/posts/x", "content": "x"}, wantSub: "page mutation service not configured"},
+		{tool: "delete_page", args: map[string]any{"route": "/posts/x"}, wantSub: "page mutation service not configured"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.tool, func(t *testing.T) {
+			res, err := session.CallTool(ctx, &mcp.CallToolParams{Name: tc.tool, Arguments: tc.args})
+			if err != nil {
+				t.Fatalf("CallTool(%s) protocol error = %v", tc.tool, err)
+			}
+			if !res.IsError {
+				t.Fatalf("CallTool(%s) expected error response: %#v", tc.tool, res)
+			}
+			text := res.Content[0].(*mcp.TextContent).Text
+			if !strings.Contains(text, tc.wantSub) {
+				t.Fatalf("CallTool(%s) error text = %q want substring %q", tc.tool, text, tc.wantSub)
+			}
+		})
+	}
+}
+
+func TestRegisterReadOnlyToolServiceErrors(t *testing.T) {
+	deps := newMutationDeps(t, &fakeBuildRunner{})
+	deps.Pages = pages.New("")
+	deps.Assets = assets.New("", "", "")
+	session, ctx := mustNewMutationSession(t, deps)
+	defer session.Close()
+
+	cases := []struct {
+		tool    string
+		args    map[string]any
+		wantSub string
+	}{
+		{tool: "list_pages", args: map[string]any{}, wantSub: "empty root"},
+		{tool: "get_page", args: map[string]any{"route": "/posts/x"}, wantSub: "Page not found"},
+		{tool: "list_assets", args: map[string]any{}, wantSub: "empty root"},
+		{tool: "create_page", args: map[string]any{"route": "/posts/conflict", "title": "x", "content": "y", "frontmatter": map[string]any{"title": "x"}}, wantSub: "Conflict"},
+		{tool: "update_page", args: map[string]any{"route": "/posts/bonjour", "lang": "fr", "frontmatter": map[string]any{"date": "2026-01-01T00:00:00Z"}}, wantSub: "cannot be modified"},
+		{tool: "delete_page", args: map[string]any{"route": "/posts/missing", "lang": "fr"}, wantSub: "Page not found"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.tool, func(t *testing.T) {
+			res, err := session.CallTool(ctx, &mcp.CallToolParams{Name: tc.tool, Arguments: tc.args})
+			if err != nil {
+				t.Fatalf("CallTool(%s) protocol error = %v", tc.tool, err)
+			}
+			if !res.IsError {
+				t.Fatalf("CallTool(%s) expected error response: %#v", tc.tool, res)
+			}
+			text := res.Content[0].(*mcp.TextContent).Text
+			if !strings.Contains(text, tc.wantSub) {
+				t.Fatalf("CallTool(%s) error text = %q want substring %q", tc.tool, text, tc.wantSub)
+			}
+		})
+	}
+}
+
 func TestRegisterMutationToolProtocolAndSchemaEdges(t *testing.T) {
 	session, ctx := mustNewMutationSession(t, newMutationDeps(t, &fakeBuildRunner{}))
 	defer session.Close()
@@ -267,6 +352,12 @@ func TestMutationToolMissingStagingSerialization(t *testing.T) {
 	}
 }
 
+func TestMustJSON(t *testing.T) {
+	if got := MustJSON(map[string]any{"a": 1}); got != `{"a":1}` {
+		t.Fatalf("MustJSON() = %q", got)
+	}
+}
+
 func TestRegisterNilDependencyErrors(t *testing.T) {
 	session, ctx := mustNewMutationSession(t, Deps{})
 	defer session.Close()
@@ -322,6 +413,18 @@ func assertToolResultStatus(t *testing.T, got map[string]any, want string) {
 	if got["status"] != want {
 		t.Fatalf("status = %v want %q", got["status"], want)
 	}
+}
+
+func equalStrings(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func mustNewMutationSession(t *testing.T, deps Deps) (*mcp.ClientSession, context.Context) {

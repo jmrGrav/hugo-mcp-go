@@ -9,12 +9,14 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jmrGrav/hugo-mcp-go/internal/observability"
 )
 
 type Server struct {
+	mu     sync.Mutex
 	cfg    Config
 	child  childBridge
 	log    *slog.Logger
@@ -50,20 +52,26 @@ func (s *Server) Handler() http.Handler {
 
 func (s *Server) ListenAndServe() error {
 	addr := fmt.Sprintf("%s:%d", s.cfg.BindAddr, s.cfg.BindPort)
-	s.server = &http.Server{
+	server := &http.Server{
 		Addr:              addr,
 		Handler:           s.Handler(),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
-	return s.server.ListenAndServe()
+	s.mu.Lock()
+	s.server = server
+	s.mu.Unlock()
+	return server.ListenAndServe()
 }
 
 func (s *Server) Close(ctx context.Context) error {
 	_ = s.child.Close()
-	if s.server == nil {
+	s.mu.Lock()
+	server := s.server
+	s.mu.Unlock()
+	if server == nil {
 		return nil
 	}
-	return s.server.Shutdown(ctx)
+	return server.Shutdown(ctx)
 }
 
 func (s *Server) serveHTTP(w http.ResponseWriter, r *http.Request) {
