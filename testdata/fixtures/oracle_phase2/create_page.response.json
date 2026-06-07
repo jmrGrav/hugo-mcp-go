@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"status\": \"created\", \"file\": \"posts/oracle-phase2/index.fr.md\", \"deploy\": \"DEPLOY_SKIPPED\", \"cf_purge\": {\"skipped\": \"plugin not active\"}, \"plugins\": []}"
+    }
+  ]
+}

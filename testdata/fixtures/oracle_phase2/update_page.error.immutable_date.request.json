@@ -1,0 +1,15 @@
+{
+  "jsonrpc": "2.0",
+  "id": 104,
+  "method": "tools/call",
+  "params": {
+    "name": "update_page",
+    "arguments": {
+      "route": "/posts/bonjour",
+      "lang": "fr",
+      "frontmatter": {
+        "date": "2020-01-01T00:00:00+00:00"
+      }
+    }
+  }
+}

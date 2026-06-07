@@ -1,0 +1,21 @@
+{
+  "count": 3,
+  "truncated": false,
+  "assets": [
+    {
+      "path": "content/posts/unicode/COVER.SVG",
+      "size_bytes": 200,
+      "mime_type": "image/svg+xml"
+    },
+    {
+      "path": "static/images/site-logo.svg",
+      "size_bytes": 318,
+      "mime_type": "image/svg+xml"
+    },
+    {
+      "path": "content/posts/bonjour/hero.svg",
+      "size_bytes": 269,
+      "mime_type": "image/svg+xml"
+    }
+  ]
+}

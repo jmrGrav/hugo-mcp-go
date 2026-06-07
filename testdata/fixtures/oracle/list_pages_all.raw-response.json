@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"pages\": [{\"route\": \"/posts/unicode\", \"lang\": \"fr\", \"file\": \"posts/unicode/index.fr.md\", \"title\": \"Café déjà vu\", \"date\": \"2026-01-12T08:00:00+01:00\", \"draft\": false, \"tags\": [\"naïve\", \"résumé\"]}, {\"route\": \"/posts/bonjour\", \"lang\": \"en\", \"file\": \"posts/bonjour/index.en.md\", \"title\": \"Hello\", \"date\": \"2026-01-11T11:00:00+01:00\", \"draft\": true, \"tags\": [\"posts\", \"en\"]}, {\"route\": \"/posts/bonjour\", \"lang\": \"fr\", \"file\": \"posts/bonjour/index.fr.md\", \"title\": \"Bonjour\", \"date\": \"2026-01-11T10:00:00+01:00\", \"draft\": false, \"tags\": [\"posts\", \"fr\"]}, {\"route\": \"/\", \"lang\": \"fr\", \"file\": \"_index.fr.md\", \"title\": \"Accueil\", \"date\": \"2026-01-10T09:00:00+01:00\", \"draft\": false, \"tags\": [\"home\", \"demo\"]}], \"total\": 4}"
+    }
+  ]
+}

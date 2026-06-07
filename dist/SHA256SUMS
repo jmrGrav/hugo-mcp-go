@@ -1,0 +1,6 @@
+28458266f55e69fc3c88dade6aff1e2bf1e11b3653bdd61f7bd3f149ef5f7314  dist/linux_amd64/hugo-mcp-go
+c664d5fc2872d5cd01cccd969a0080ebc5690754b9c5b56c3425ee623181efb6  dist/linux_amd64/hugo-mcp-shim
+4b8affe380f0f3cd3df0b415f56fc6432c1c9dda0546bc4330d1ef361c804164  dist/linux_arm64/hugo-mcp-go
+4aa089fde5263c40754357b357a530fe8bc947f8f7f5e6a78581b54dfbb5f993  dist/linux_arm64/hugo-mcp-shim
+28458266f55e69fc3c88dade6aff1e2bf1e11b3653bdd61f7bd3f149ef5f7314  dist/local/linux_amd64/hugo-mcp-go
+c664d5fc2872d5cd01cccd969a0080ebc5690754b9c5b56c3425ee623181efb6  dist/local/linux_amd64/hugo-mcp-shim

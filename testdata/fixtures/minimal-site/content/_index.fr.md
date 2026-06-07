@@ -1,0 +1,12 @@
+---
+title: "Accueil"
+date: "2026-01-10T09:00:00+01:00"
+lastmod: "2026-01-10T09:30:00+01:00"
+draft: false
+tags:
+  - home
+  - demo
+description: "Page d'accueil minimale pour la capture oracle."
+---
+
+Contenu racine minimal.

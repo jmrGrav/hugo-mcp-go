@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="128" viewBox="0 0 256 128" role="img" aria-label="Hero asset">
+  <rect width="256" height="128" fill="#1a1b26"/>
+  <text x="20" y="70" fill="#7aa2f7" font-family="sans-serif" font-size="24">hero</text>
+</svg>

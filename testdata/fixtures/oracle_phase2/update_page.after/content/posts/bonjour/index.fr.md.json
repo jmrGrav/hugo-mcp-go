@@ -1,0 +1,4 @@
+{
+  "path": "content/posts/bonjour/index.fr.md",
+  "content": "---\ntitle: Bonjour mis à jour\ndate: '2026-01-11T10:00:00+01:00'\nlastmod: '2026-06-06T11:00:00+02:00'\ndraft: false\ntags:\n- posts\n- fr\n- oracle\nfeaturedImage: /images/site-logo.svg\nseo:\n  summary: Updated\n---\n\nContenu français mis à jour.\n"
+}

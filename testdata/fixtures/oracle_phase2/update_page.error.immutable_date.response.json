@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Field(s) cannot be modified via update_page: date"
+    }
+  ],
+  "isError": true
+}

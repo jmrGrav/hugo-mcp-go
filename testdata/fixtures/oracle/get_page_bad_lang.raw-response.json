@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Invalid lang (must match ^[a-z]{2,3}$): english"
+    }
+  ],
+  "isError": true
+}

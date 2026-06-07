@@ -1,0 +1,143 @@
+[
+  {
+    "name": "create_page",
+    "description": "Créer une nouvelle page Hugo + rebuild + purge Cloudflare ciblée",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "route": {
+          "type": "string",
+          "description": "Route ex: /posts/mon-article"
+        },
+        "lang": {
+          "type": "string",
+          "description": "Langue (fr, en)",
+          "default": "fr"
+        },
+        "title": {
+          "type": "string",
+          "description": "Titre de la page"
+        },
+        "content": {
+          "type": "string",
+          "description": "Contenu Markdown (sans front matter)"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "draft": {
+          "type": "boolean",
+          "default": false
+        },
+        "frontmatter": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Champs frontmatter libres (description, categories, featuredImage, lastmod, date, etc.). Chaque valeur : string/number/boolean/list/dict (max 3 niveaux, 10 KB total). Champs interdits : aliases, cascade, build, outputs, headless, _target → HTTP 400. Conflit avec un param dédié (title, tags, draft) → HTTP 400. date et lastmod auto-générés si absents."
+        }
+      },
+      "required": [
+        "route",
+        "title",
+        "content"
+      ]
+    }
+  },
+  {
+    "name": "update_page",
+    "description": "Modifier une page existante + rebuild + purge Cloudflare ciblée",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "route": {
+          "type": "string"
+        },
+        "lang": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "draft": {
+          "type": "boolean"
+        },
+        "frontmatter": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Champs frontmatter libres mergés profondément sur le frontmatter existant. Utiliser null pour supprimer un champ (ex: {\"description\": null}). Chaque valeur : string/number/boolean/list/dict (max 3 niveaux, 10 KB). Champs interdits : aliases, cascade, build, outputs, headless, _target → HTTP 400. Conflit avec un param dédié (title, tags, draft) → HTTP 400. date est immuable. lastmod auto-mis à jour si absent."
+        }
+      },
+      "required": [
+        "route"
+      ]
+    }
+  },
+  {
+    "name": "delete_page",
+    "description": "Supprimer une page + rebuild + purge Cloudflare totale",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "route": {
+          "type": "string"
+        },
+        "lang": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "route"
+      ]
+    }
+  },
+  {
+    "name": "build_site",
+    "description": "Rebuild Hugo + déploiement + purge Cloudflare totale",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "purge_cf": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    }
+  },
+  {
+    "name": "upload_asset",
+    "description": "Uploader une image dans static/{subfolder}/ du site Hugo",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filename": {
+          "type": "string",
+          "description": "Nom du fichier ex: schema.png"
+        },
+        "data": {
+          "type": "string",
+          "description": "Contenu encodé en base64"
+        },
+        "subfolder": {
+          "type": "string",
+          "default": "images",
+          "description": "Sous-dossier dans static/ (defaut: images)"
+        }
+      },
+      "required": [
+        "filename",
+        "data"
+      ]
+    }
+  }
+]

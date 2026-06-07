@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": 8,
+  "method": "tools/call",
+  "params": {
+    "name": "get_page",
+    "arguments": {
+      "route": "../escape",
+      "lang": "fr"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "jsonrpc": "2.0",
+  "id": 11,
+  "method": "tools/call",
+  "params": {
+    "name": "list_assets",
+    "arguments": {
+      "path_prefix": "../escape"
+    }
+  }
+}

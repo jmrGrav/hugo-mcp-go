@@ -1,0 +1,11 @@
+{
+  "jsonrpc": "2.0",
+  "id": 109,
+  "method": "tools/call",
+  "params": {
+    "name": "build_site",
+    "arguments": {
+      "purge_cf": true
+    }
+  }
+}

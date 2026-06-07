@@ -1,0 +1,70 @@
+{
+  "tools": [
+    {
+      "name": "list_pages",
+      "description": "Lister toutes les pages du site Hugo",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "lang": {
+            "type": "string",
+            "description": "Langue (fr, en). Optionnel."
+          },
+          "section": {
+            "type": "string",
+            "description": "Section (posts, pages...). Optionnel."
+          }
+        }
+      }
+    },
+    {
+      "name": "get_page",
+      "description": "Lire le contenu d'une page Hugo",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "route": {
+            "type": "string",
+            "description": "Route de la page ex: /posts/mon-article"
+          },
+          "lang": {
+            "type": "string",
+            "description": "Langue (fr, en)"
+          }
+        },
+        "required": [
+          "route"
+        ]
+      }
+    },
+    {
+      "name": "list_assets",
+      "description": "Lister les assets du site Hugo (static/ et page bundles dans content/), triés par date de modification décroissante",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "image",
+              "document",
+              "all"
+            ],
+            "default": "all",
+            "description": "Filtrer par type : image (jpg/png/svg…), document (pdf/csv/zip…), all"
+          },
+          "path_prefix": {
+            "type": "string",
+            "description": "Sous-dossier relatif à filtrer (ex: posts/mon-article/). Sans leading /, sans .."
+          },
+          "max_results": {
+            "type": "integer",
+            "default": 100,
+            "maximum": 500,
+            "description": "Nombre max de résultats (défaut 100, max 500)"
+          }
+        }
+      }
+    }
+  ]
+}

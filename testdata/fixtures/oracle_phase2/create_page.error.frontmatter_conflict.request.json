@@ -1,0 +1,17 @@
+{
+  "jsonrpc": "2.0",
+  "id": 102,
+  "method": "tools/call",
+  "params": {
+    "name": "create_page",
+    "arguments": {
+      "route": "/posts/conflict",
+      "lang": "fr",
+      "title": "Conflict title",
+      "content": "Body",
+      "frontmatter": {
+        "title": "Illegal duplicate"
+      }
+    }
+  }
+}

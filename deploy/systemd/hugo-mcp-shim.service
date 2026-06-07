@@ -1,0 +1,33 @@
+[Unit]
+Description=hugo-mcp-shim VM-local MCP bridge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hugo-mcp-shim
+Group=hugo-mcp-shim
+SupplementaryGroups=hugo-mcp
+WorkingDirectory=/var/lib/hugo-mcp-go
+EnvironmentFile=-/etc/hugo-mcp-go/hugo-mcp-shim.env
+ExecStart=/srv/hugo-mcp-go/bin/hugo-mcp-shim
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+LockPersonality=yes
+UMask=0027
+StandardOutput=journal
+StandardError=journal
+ReadWritePaths=/var/lib/hugo-mcp-go
+IPAddressDeny=any
+IPAddressAllow=192.168.122.69
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

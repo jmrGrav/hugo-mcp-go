@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Tool not found: not_a_tool"
+    }
+  ],
+  "isError": true
+}

@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Invalid path_prefix: must be relative without '..'"
+    }
+  ],
+  "isError": true
+}

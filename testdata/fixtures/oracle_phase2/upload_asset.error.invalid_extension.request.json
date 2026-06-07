@@ -1,0 +1,13 @@
+{
+  "jsonrpc": "2.0",
+  "id": 108,
+  "method": "tools/call",
+  "params": {
+    "name": "upload_asset",
+    "arguments": {
+      "filename": "tool.exe",
+      "data": "YWJj",
+      "subfolder": "images"
+    }
+  }
+}

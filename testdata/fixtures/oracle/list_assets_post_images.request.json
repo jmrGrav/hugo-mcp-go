@@ -1,0 +1,13 @@
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "tools/call",
+  "params": {
+    "name": "list_assets",
+    "arguments": {
+      "type": "image",
+      "path_prefix": "posts/bonjour",
+      "max_results": 20
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Invalid route (path traversal): ../escape"
+    }
+  ],
+  "isError": true
+}

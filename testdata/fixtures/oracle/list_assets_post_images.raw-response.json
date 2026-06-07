@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"count\": 1, \"truncated\": false, \"assets\": [{\"path\": \"content/posts/bonjour/hero.svg\", \"size_bytes\": 269, \"mime_type\": \"image/svg+xml\", \"modified\": \"2026-06-06T14:52:18\"}]}"
+    }
+  ]
+}

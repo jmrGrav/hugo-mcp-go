@@ -1,0 +1,11 @@
+{
+  "jsonrpc": "2.0",
+  "id": 105,
+  "method": "tools/call",
+  "params": {
+    "name": "delete_page",
+    "arguments": {
+      "route": "/posts/plain"
+    }
+  }
+}

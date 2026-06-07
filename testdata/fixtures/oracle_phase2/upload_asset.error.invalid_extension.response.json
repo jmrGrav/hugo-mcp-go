@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Unsupported extension '.exe'. Allowed: ['.gif', '.jpeg', '.jpg', '.png', '.svg', '.webp']"
+    }
+  ],
+  "isError": true
+}

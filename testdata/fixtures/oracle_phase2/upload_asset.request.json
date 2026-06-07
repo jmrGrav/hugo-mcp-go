@@ -1,0 +1,13 @@
+{
+  "jsonrpc": "2.0",
+  "id": 107,
+  "method": "tools/call",
+  "params": {
+    "name": "upload_asset",
+    "arguments": {
+      "filename": "oracle-phase2.svg",
+      "data": "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjZWVlIi8+PC9zdmc+",
+      "subfolder": "images/oracle"
+    }
+  }
+}

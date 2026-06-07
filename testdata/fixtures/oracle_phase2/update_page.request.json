@@ -1,0 +1,27 @@
+{
+  "jsonrpc": "2.0",
+  "id": 103,
+  "method": "tools/call",
+  "params": {
+    "name": "update_page",
+    "arguments": {
+      "route": "/posts/bonjour",
+      "lang": "fr",
+      "title": "Bonjour mis à jour",
+      "content": "Contenu français mis à jour.",
+      "tags": [
+        "posts",
+        "fr",
+        "oracle"
+      ],
+      "draft": false,
+      "frontmatter": {
+        "description": null,
+        "seo": {
+          "summary": "Updated"
+        },
+        "lastmod": "2026-06-06T11:00:00+02:00"
+      }
+    }
+  }
+}
