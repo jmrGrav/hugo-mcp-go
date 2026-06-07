@@ -13,6 +13,7 @@ Read in this order:
 
 1. [`LIVE_CUTOVER_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/LIVE_CUTOVER_REPORT.md)
 1. [`LIVE_ROLLBACK.md`](/home/jm/Documents/hugo-mcp-go/docs/LIVE_ROLLBACK.md)
+1. [`NEXT_V1_READINESS_PLAN.md`](/home/jm/Documents/hugo-mcp-go/docs/NEXT_V1_READINESS_PLAN.md)
 1. [`SMOKE_TEST_AND_COVERAGE_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/SMOKE_TEST_AND_COVERAGE_REPORT.md)
 1. [`COVERAGE_PUSH_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/COVERAGE_PUSH_REPORT.md)
 1. [`HOOKS_HARDENING_REPORT.md`](/home/jm/Documents/hugo-mcp-go/docs/HOOKS_HARDENING_REPORT.md)
@@ -65,6 +66,7 @@ Notes:
 
 - `LIVE_CUTOVER_REPORT.md` is the current source of truth for the live Go route and the immediate validation result.
 - `LIVE_ROLLBACK.md` is the current source of truth for the instant rollback path back to Python.
+- `NEXT_V1_READINESS_PLAN.md` captures the post-merge work needed before any v1.0.0 decision.
 - `MCP_PROTOCOL_PARITY_FIX_REPORT.md` remains the source of truth for Claude reload and blocker history.
 - `TOOL_CATALOG_PARITY_REPORT.md` is the source of truth for the restored `check_sri_versions` and `generate_featured_image` tools.
 - `COVERAGE_PUSH_REPORT.md` records the coverage-improvement cycles for the new tool work.
