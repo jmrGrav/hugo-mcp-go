@@ -1,5 +1,10 @@
 # hugo-mcp-go
 
+[![Go](https://img.shields.io/badge/go-1.25-blue)](https://go.dev)
+[![Release](https://img.shields.io/github/v/release/jmrGrav/hugo-mcp-go?label=release)](https://github.com/jmrGrav/hugo-mcp-go/releases/latest)
+[![CI](https://github.com/jmrGrav/hugo-mcp-go/actions/workflows/ci.yml/badge.svg)](https://github.com/jmrGrav/hugo-mcp-go/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/jmrGrav/hugo-mcp-go)](LICENSE)
+
 `hugo-mcp-go` is the Go implementation of the Hugo MCP backend used behind `mcp-runtime-go`.
 
 It is operator-controlled, single-tenant, and designed to serve Hugo content tooling with a native HTTP backend while preserving the older stdio path for rollback.
@@ -95,3 +100,5 @@ The current release candidate has been validated with:
 - `scripts/native-http-smoke.sh`
 
 The native backend is live in controlled production, while the shim and Python backend remain preserved for rollback.
+
+License: MIT
