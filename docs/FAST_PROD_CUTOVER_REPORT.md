@@ -9,12 +9,13 @@ The active backend path is now native HTTP on `192.168.122.69:18181`; the shim a
 
 ## Commit Deployed
 
-- `e7c6e85493947a53670e09627098c0caa50681ef`
+- `5ff3763` (`mcp: add native http transport and tool metadata`)
 
 ## Backend URLs
 
 - Previous Python backend URL: `http://192.168.122.69:8000/mcp`
-- Go backend URL used by the runtime path: `http://192.168.122.69:18180/mcp`
+- Previous shim rollback backend URL: `http://192.168.122.69:18180/mcp`
+- Native HTTP backend URL used by the runtime path: `http://192.168.122.69:18181/mcp`
 
 ## Service State
 
@@ -26,7 +27,7 @@ The active backend path is now native HTTP on `192.168.122.69:18181`; the shim a
 
 ## Environment
 
-- `HUGO_MCP_URL` was already set to `http://192.168.122.69:18180/mcp` when checked
+- `HUGO_MCP_URL` is set to `http://192.168.122.69:18181/mcp`
 - rollback remains the Python URL in `/etc/mcp-runtime-go/mcp-runtime.env` backups
 
 ## Commands Used
@@ -47,7 +48,7 @@ sudo systemctl restart mcp-runtime.service
 - `go vet ./...`
 - `scripts/tool-parity-smoke.sh`
 - `scripts/hooks-smoke.sh`
-- direct VM backend calls against `http://192.168.122.69:18180/mcp`
+- direct VM backend calls against `http://192.168.122.69:18181/mcp`
 
 ## Direct VM Smoke Results
 
@@ -102,7 +103,7 @@ Examples from `tools/list` on the native backend after redeploy:
 ## Verdict
 
 - Go branchée en production: yes
-- `mcp-runtime-go` pointe vers Go: yes
+- `mcp-runtime-go` pointe vers native HTTP Go: yes
 - Python conservé: yes
 - rollback prêt: yes
 - errors restantes: gateway OAuth bearer not captured in this shell session
@@ -141,8 +142,8 @@ Examples from `tools/list` on the native backend after redeploy:
 - service supplementary group fix: yes, `hugo-mcp-shim` added so the service can read existing content/static files
 - public build output ownership fix: yes, `/var/lib/hugo-mcp-go/public` now owned by `hugo-mcp:hugo-mcp`
 - cutover time: 2026-06-07 18:05 CEST
-- old backend URL: `http://192.168.122.69:18180/mcp`
-- new backend URL: `http://192.168.122.69:18181/mcp`
+- old rollback backend URL: `http://192.168.122.69:18180/mcp`
+- active native backend URL: `http://192.168.122.69:18181/mcp`
 - cutover validated on VM/native HTTP path: yes
 - native smoke result: passed
 - rollback ready: yes
@@ -151,4 +152,4 @@ Examples from `tools/list` on the native backend after redeploy:
 - Claude.ai refresh result: pending live operator/client refresh after gateway cutover
 - logs confirming native backend calls: `hugo-mcp-go-http.service` shows successful `POST /mcp` requests during native smoke and direct probes
 - logs confirming absence of shim calls: no shim calls were observed during the native smoke window
-- verdict: native HTTP transport is validated on the VM staging path; active runtime cutover can proceed when the operator is ready
+- verdict: native HTTP transport is active on the runtime path; the shim and Python remain rollback-only
