@@ -57,7 +57,7 @@ func registerHookAdminTools(s *mcp.Server, deps Deps) {
 		return
 	}
 
-	mcp.AddTool(s, &mcp.Tool{Name: "list_hook_jobs", Description: "List pending and failed hook jobs."}, func(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, listHookJobsOutput, error) {
+	mcp.AddTool(s, toolMeta("list_hook_jobs", "List hook jobs", "List pending and failed hook jobs.", true), func(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, listHookJobsOutput, error) {
 		if deps.HooksStore == nil {
 			return nil, listHookJobsOutput{}, context.Canceled
 		}
@@ -79,7 +79,7 @@ func registerHookAdminTools(s *mcp.Server, deps Deps) {
 		return nil, out, nil
 	})
 
-	mcp.AddTool(s, &mcp.Tool{Name: "retry_hook_jobs", Description: "Retry failed hook jobs."}, func(ctx context.Context, _ *mcp.CallToolRequest, in retryHookJobsInput) (*mcp.CallToolResult, retryHookJobsOutput, error) {
+	mcp.AddTool(s, toolMeta("retry_hook_jobs", "Retry hook jobs", "Retry failed hook jobs.", false), func(ctx context.Context, _ *mcp.CallToolRequest, in retryHookJobsInput) (*mcp.CallToolResult, retryHookJobsOutput, error) {
 		if deps.HooksStore == nil {
 			return nil, retryHookJobsOutput{}, context.Canceled
 		}
@@ -122,7 +122,7 @@ func registerHookAdminTools(s *mcp.Server, deps Deps) {
 		return nil, retryHookJobsOutput{RetriedCount: retried}, nil
 	})
 
-	mcp.AddTool(s, &mcp.Tool{Name: "get_hook_status", Description: "Get hooks summary and queue counts."}, func(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, hookSummaryOutput, error) {
+	mcp.AddTool(s, toolMeta("get_hook_status", "Get hook status", "Get hooks summary and queue counts.", true), func(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, hookSummaryOutput, error) {
 		if deps.HooksStore == nil {
 			return nil, emptyHookSummaryOutput(), context.Canceled
 		}
@@ -146,7 +146,7 @@ func registerHookAdminTools(s *mcp.Server, deps Deps) {
 		return nil, out, nil
 	})
 
-	mcp.AddTool(s, &mcp.Tool{Name: "run_post_build_hooks", Description: "Run post-build hooks for explicit URLs."}, func(ctx context.Context, _ *mcp.CallToolRequest, in runPostBuildHooksInput) (*mcp.CallToolResult, hookSummaryOutput, error) {
+	mcp.AddTool(s, toolMeta("run_post_build_hooks", "Run post-build hooks", "Run post-build hooks for explicit URLs.", false), func(ctx context.Context, _ *mcp.CallToolRequest, in runPostBuildHooksInput) (*mcp.CallToolResult, hookSummaryOutput, error) {
 		if deps.Hooks == nil {
 			return nil, emptyHookSummaryOutput(), context.Canceled
 		}

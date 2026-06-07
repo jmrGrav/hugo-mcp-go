@@ -29,7 +29,7 @@ func TestRegisterExposesMutationToolsAndCallsWork(t *testing.T) {
 	for _, tool := range toolsRes.Tools {
 		got[tool.Name] = true
 	}
-	for _, name := range []string{"list_pages", "get_page", "list_assets", "create_page", "update_page", "delete_page", "upload_asset", "build_site"} {
+	for _, name := range []string{"list_pages", "get_page", "get_page_chunk", "list_assets", "get_asset_chunk", "create_page", "update_page", "delete_page", "upload_asset", "build_site"} {
 		if !got[name] {
 			t.Fatalf("tool %q not exposed", name)
 		}
@@ -65,6 +65,58 @@ func TestRegisterExposesMutationToolsAndCallsWork(t *testing.T) {
 		"lang":  "fr",
 	})
 	assertToolResultStatus(t, deleteRes, "deleted")
+}
+
+func TestRegisterPaginationAndChunkTools(t *testing.T) {
+	ws := newTestWorkspace(t)
+	if err := os.MkdirAll(filepath.Join(ws.ContentRoot, "posts", "chunked"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ws.ContentRoot, "posts", "chunked", "index.fr.md"), []byte("---\ntitle: chunked\n---\n"+strings.Repeat("abcdef", 32)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(ws.StaticRoot, "images"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ws.StaticRoot, "images", "chunk.bin"), []byte("0123456789abcdef0123456789abcdef"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	session, ctx := mustNewMutationSession(t, Deps{
+		Pages:          pages.New(ws.ContentRoot),
+		Assets:         assets.New(ws.HugoRoot, ws.ContentRoot, ws.StaticRoot),
+		PageMutations:  mutations.NewPageService(ws),
+		AssetMutations: mutations.NewAssetService(ws),
+		Build:          mutations.NewBuildService(ws, &fakeBuildRunner{}),
+	})
+	defer session.Close()
+
+	listPages := mustCallToolResult(t, session, ctx, "list_pages", map[string]any{"limit": 1})
+	pagesOut := mustStructuredMap(t, listPages)
+	if v, ok := pagesOut["has_more"].(bool); !ok || !v {
+		t.Fatalf("list_pages expected has_more=true: %#v", pagesOut)
+	}
+	if pagesOut["next_cursor"] == "" {
+		t.Fatalf("list_pages expected next_cursor: %#v", pagesOut)
+	}
+
+	pageChunk := mustCallToolResult(t, session, ctx, "get_page_chunk", map[string]any{"route": "/posts/chunked", "lang": "fr", "cursor": 0, "chunk_bytes": 16})
+	pageChunkOut := mustStructuredMap(t, pageChunk)
+	if pageChunkOut["chunk"] == "" {
+		t.Fatalf("get_page_chunk returned empty chunk: %#v", pageChunkOut)
+	}
+	if pageChunkOut["next_cursor"] == "" {
+		t.Fatalf("get_page_chunk expected next_cursor: %#v", pageChunkOut)
+	}
+
+	assetChunk := mustCallToolResult(t, session, ctx, "get_asset_chunk", map[string]any{"path": "static/images/chunk.bin", "cursor": 0, "chunk_bytes": 8})
+	assetChunkOut := mustStructuredMap(t, assetChunk)
+	if assetChunkOut["chunk"] == "" {
+		t.Fatalf("get_asset_chunk returned empty chunk: %#v", assetChunkOut)
+	}
+	if assetChunkOut["next_cursor"] == "" {
+		t.Fatalf("get_asset_chunk expected next_cursor: %#v", assetChunkOut)
+	}
 }
 
 func TestRegisterMutationToolErrorPaths(t *testing.T) {
@@ -128,18 +180,77 @@ func TestRegisterToolMetadataAndNilDependenciesAreComplete(t *testing.T) {
 		t.Fatalf("ListTools() error = %v", err)
 	}
 	gotNames := make([]string, 0, len(toolsRes.Tools))
+	toolsByName := make(map[string]*mcp.Tool, len(toolsRes.Tools))
 	for _, tool := range toolsRes.Tools {
 		gotNames = append(gotNames, tool.Name)
+		toolsByName[tool.Name] = tool
 		if tool.Description == "" {
 			t.Fatalf("tool %q missing description", tool.Name)
+		}
+		if tool.Title == "" {
+			t.Fatalf("tool %q missing title", tool.Name)
 		}
 		if tool.InputSchema == nil {
 			t.Fatalf("tool %q missing input schema", tool.Name)
 		}
 	}
-	wantOrder := []string{"build_site", "check_sri_versions", "create_page", "delete_page", "generate_featured_image", "get_page", "list_assets", "list_pages", "update_page", "upload_asset"}
+	wantOrder := []string{"build_site", "check_sri_versions", "create_page", "delete_page", "generate_featured_image", "get_asset_chunk", "get_page", "get_page_chunk", "list_assets", "list_pages", "update_page", "upload_asset"}
 	if !equalStrings(gotNames, wantOrder) {
 		t.Fatalf("tool order = %#v want %#v", gotNames, wantOrder)
+	}
+
+	readOnlyTools := []string{"get_asset_chunk", "get_page", "get_page_chunk", "list_assets", "list_pages"}
+	for _, name := range readOnlyTools {
+		tool := toolsByName[name]
+		if tool == nil {
+			t.Fatalf("tool %q missing", name)
+		}
+		if tool.Annotations == nil || !tool.Annotations.ReadOnlyHint {
+			t.Fatalf("tool %q expected readOnlyHint=true, got %#v", name, tool.Annotations)
+		}
+	}
+
+	destructiveTools := []string{"build_site", "check_sri_versions", "create_page", "delete_page", "generate_featured_image", "update_page", "upload_asset"}
+	for _, name := range destructiveTools {
+		tool := toolsByName[name]
+		if tool == nil {
+			t.Fatalf("tool %q missing", name)
+		}
+		if tool.Annotations == nil || tool.Annotations.DestructiveHint == nil || !*tool.Annotations.DestructiveHint {
+			t.Fatalf("tool %q expected destructiveHint=true, got %#v", name, tool.Annotations)
+		}
+	}
+
+	listAssetsSchema := schemaProperty(t, toolsByName["list_assets"], "path_prefix")
+	if desc := stringValue(listAssetsSchema["description"]); !strings.Contains(desc, "exact directory prefix") {
+		t.Fatalf("list_assets.path_prefix description = %q", desc)
+	}
+	imageSchema := schemaProperty(t, toolsByName["generate_featured_image"], "accent")
+	if desc := stringValue(imageSchema["description"]); !strings.Contains(desc, "#7aa2f7") {
+		t.Fatalf("generate_featured_image.accent description = %q", desc)
+	}
+
+	hookSession, hookCtx := mustNewMutationSession(t, Deps{HooksAdminEnabled: true})
+	defer hookSession.Close()
+	hookToolsRes, err := hookSession.ListTools(hookCtx, nil)
+	if err != nil {
+		t.Fatalf("ListTools() hooks error = %v", err)
+	}
+	hookTools := map[string]*mcp.Tool{}
+	for _, tool := range hookToolsRes.Tools {
+		hookTools[tool.Name] = tool
+	}
+	for _, name := range []string{"list_hook_jobs", "get_hook_status"} {
+		tool := hookTools[name]
+		if tool == nil || tool.Annotations == nil || !tool.Annotations.ReadOnlyHint {
+			t.Fatalf("hook tool %q expected readOnlyHint=true, got %#v", name, tool)
+		}
+	}
+	for _, name := range []string{"retry_hook_jobs", "run_post_build_hooks"} {
+		tool := hookTools[name]
+		if tool == nil || tool.Annotations == nil || tool.Annotations.DestructiveHint == nil || !*tool.Annotations.DestructiveHint {
+			t.Fatalf("hook tool %q expected destructiveHint=true, got %#v", name, tool)
+		}
 	}
 
 	cases := []struct {
@@ -165,6 +276,34 @@ func TestRegisterToolMetadataAndNilDependenciesAreComplete(t *testing.T) {
 			}
 		})
 	}
+}
+
+func schemaProperty(t *testing.T, tool *mcp.Tool, field string) map[string]any {
+	t.Helper()
+	raw, err := json.Marshal(tool.InputSchema)
+	if err != nil {
+		t.Fatalf("marshal input schema for %s: %v", tool.Name, err)
+	}
+	var schema map[string]any
+	if err := json.Unmarshal(raw, &schema); err != nil {
+		t.Fatalf("decode input schema for %s: %v", tool.Name, err)
+	}
+	props, ok := schema["properties"].(map[string]any)
+	if !ok {
+		t.Fatalf("tool %s missing properties: %#v", tool.Name, schema)
+	}
+	prop, ok := props[field].(map[string]any)
+	if !ok {
+		t.Fatalf("tool %s missing property %q: %#v", tool.Name, field, schema)
+	}
+	return prop
+}
+
+func stringValue(v any) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
 }
 
 func TestRegisterReadOnlyToolServiceErrors(t *testing.T) {
@@ -393,9 +532,17 @@ func TestRegisterNilDependencyErrors(t *testing.T) {
 
 func mustCallTool(t *testing.T, session *mcp.ClientSession, ctx context.Context, name string, args map[string]any) map[string]any {
 	t.Helper()
-	res, err := session.CallTool(ctx, &mcp.CallToolParams{Name: name, Arguments: args})
-	if err != nil {
-		t.Fatalf("CallTool(%s) error = %v", name, err)
+	res := mustCallToolResult(t, session, ctx, name, args)
+	if res.StructuredContent != nil {
+		raw, err := json.Marshal(res.StructuredContent)
+		if err != nil {
+			t.Fatalf("CallTool(%s) structured content marshal error = %v", name, err)
+		}
+		var got map[string]any
+		if err := json.Unmarshal(raw, &got); err != nil {
+			t.Fatalf("CallTool(%s) structured content decode error = %v", name, err)
+		}
+		return got
 	}
 	if len(res.Content) == 0 {
 		t.Fatalf("CallTool(%s) returned no content", name)
@@ -404,6 +551,31 @@ func mustCallTool(t *testing.T, session *mcp.ClientSession, ctx context.Context,
 	var got map[string]any
 	if err := json.Unmarshal([]byte(text), &got); err != nil {
 		t.Fatalf("CallTool(%s) JSON decode error = %v", name, err)
+	}
+	return got
+}
+
+func mustCallToolResult(t *testing.T, session *mcp.ClientSession, ctx context.Context, name string, args map[string]any) *mcp.CallToolResult {
+	t.Helper()
+	res, err := session.CallTool(ctx, &mcp.CallToolParams{Name: name, Arguments: args})
+	if err != nil {
+		t.Fatalf("CallTool(%s) error = %v", name, err)
+	}
+	return res
+}
+
+func mustStructuredMap(t *testing.T, res *mcp.CallToolResult) map[string]any {
+	t.Helper()
+	if res.StructuredContent == nil {
+		t.Fatal("missing structured content")
+	}
+	raw, err := json.Marshal(res.StructuredContent)
+	if err != nil {
+		t.Fatalf("marshal structured content: %v", err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("decode structured content: %v", err)
 	}
 	return got
 }

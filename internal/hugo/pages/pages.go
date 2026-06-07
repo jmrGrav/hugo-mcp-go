@@ -7,7 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/jmrGrav/hugo-mcp-go/internal/hugo/frontmatter"
 	"github.com/jmrGrav/hugo-mcp-go/internal/security/pathguard"
@@ -21,6 +23,8 @@ type Service struct {
 type ListRequest struct {
 	Lang    string
 	Section string
+	Cursor  string
+	Limit   int
 }
 
 type Summary struct {
@@ -34,10 +38,12 @@ type Summary struct {
 }
 
 type ListResult struct {
-	Pages   []Summary `json:"pages"`
-	Total   int       `json:"total"`
-	Skipped *int      `json:"skipped,omitempty"`
-	Error   string    `json:"error,omitempty"`
+	Pages      []Summary `json:"pages"`
+	Total      int       `json:"total"`
+	Skipped    *int      `json:"skipped,omitempty"`
+	Error      string    `json:"error,omitempty"`
+	HasMore    bool      `json:"has_more,omitempty"`
+	NextCursor string    `json:"next_cursor,omitempty"`
 }
 
 type GetRequest struct {
@@ -50,6 +56,25 @@ type Page struct {
 	File        string         `json:"file"`
 	Frontmatter map[string]any `json:"frontmatter"`
 	Content     string         `json:"content"`
+}
+
+type ChunkRequest struct {
+	Route      string
+	Lang       string
+	Cursor     int
+	ChunkBytes int
+}
+
+type ChunkResult struct {
+	Route       string         `json:"route"`
+	File        string         `json:"file"`
+	Frontmatter map[string]any `json:"frontmatter"`
+	Content     string         `json:"content"`
+	Cursor      int            `json:"cursor"`
+	NextCursor  string         `json:"next_cursor,omitempty"`
+	ChunkBytes  int            `json:"chunk_bytes"`
+	TotalBytes  int            `json:"total_bytes"`
+	IsLast      bool           `json:"is_last"`
 }
 
 func New(contentRoot string) *Service {
@@ -155,9 +180,32 @@ func (s *Service) List(ctx context.Context, req ListRequest) (ListResult, error)
 		return pages[i].Date > pages[j].Date
 	})
 
-	res := ListResult{Pages: pages, Total: len(pages)}
+	offset, err := parseOffset(req.Cursor)
+	if err != nil {
+		return ListResult{}, err
+	}
+	limit := req.Limit
+	if limit <= 0 {
+		limit = len(pages)
+	}
+	if limit < 0 {
+		limit = len(pages)
+	}
+	if offset > len(pages) {
+		offset = len(pages)
+	}
+	end := offset + limit
+	if end > len(pages) {
+		end = len(pages)
+	}
+	window := pages[offset:end]
+	res := ListResult{Pages: window, Total: len(pages)}
 	if skipped > 0 {
 		res.Skipped = &skipped
+	}
+	if end < len(pages) {
+		res.HasMore = true
+		res.NextCursor = strconv.Itoa(end)
 	}
 	return res, nil
 }
@@ -186,7 +234,7 @@ func (s *Service) Get(ctx context.Context, req GetRequest) (Page, error) {
 			return Page{}, err
 		}
 		if info.Size() > limit {
-			return Page{}, fmt.Errorf("page too large: %d bytes (max %d)", info.Size(), limit)
+			return Page{}, fmt.Errorf("page too large: %d bytes (max %d); use get_page_chunk", info.Size(), limit)
 		}
 	}
 	fm, content, err := frontmatter.ParseFile(file)
@@ -197,6 +245,66 @@ func (s *Service) Get(ctx context.Context, req GetRequest) (Page, error) {
 		return Page{Route: "/", File: rel, Frontmatter: fm, Content: content}, nil
 	}
 	return Page{Route: route, File: rel, Frontmatter: fm, Content: content}, nil
+}
+
+func (s *Service) GetChunk(ctx context.Context, req ChunkRequest) (ChunkResult, error) {
+	if err := ctx.Err(); err != nil {
+		return ChunkResult{}, err
+	}
+	route, root, err := normalizeRoute(req.Route)
+	if err != nil {
+		return ChunkResult{}, err
+	}
+	lang := strings.TrimSpace(req.Lang)
+	if lang != "" {
+		if _, err := validateLang(lang); err != nil {
+			return ChunkResult{}, err
+		}
+	}
+	rel, file, err := s.findPage(route, lang)
+	if err != nil {
+		return ChunkResult{}, err
+	}
+	if req.ChunkBytes <= 0 {
+		req.ChunkBytes = 64 << 10
+	}
+	if req.Cursor < 0 {
+		return ChunkResult{}, fmt.Errorf("invalid cursor: must be >= 0")
+	}
+	fm, content, err := frontmatter.ParseFile(file)
+	if err != nil {
+		return ChunkResult{}, err
+	}
+	contentBytes := []byte(content)
+	offset := req.Cursor
+	if offset > len(contentBytes) {
+		offset = len(contentBytes)
+	}
+	end := offset + req.ChunkBytes
+	if end > len(contentBytes) {
+		end = len(contentBytes)
+	}
+	for end > offset && !utf8.Valid(contentBytes[offset:end]) {
+		end--
+	}
+	body := string(contentBytes[offset:end])
+	out := ChunkResult{
+		Route:       route,
+		File:        rel,
+		Frontmatter: fm,
+		Content:     body,
+		Cursor:      offset,
+		ChunkBytes:  len([]byte(body)),
+		TotalBytes:  len(contentBytes),
+		IsLast:      end >= len(contentBytes),
+	}
+	if !out.IsLast {
+		out.NextCursor = strconv.Itoa(end)
+	}
+	if root {
+		out.Route = "/"
+	}
+	return out, nil
 }
 
 func (s *Service) findPage(route, lang string) (string, string, error) {
@@ -264,6 +372,21 @@ func collectRecursiveIndexes(root string, visit func(string) error) error {
 		}
 		return nil
 	})
+}
+
+func parseOffset(raw string) (int, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return 0, nil
+	}
+	v, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, fmt.Errorf("invalid cursor: %w", err)
+	}
+	if v < 0 {
+		return 0, fmt.Errorf("invalid cursor: must be >= 0")
+	}
+	return v, nil
 }
 
 func normalizeRoute(route string) (string, bool, error) {

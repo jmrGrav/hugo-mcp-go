@@ -10,6 +10,7 @@ The MCP tool catalog now includes the two previously missing Python tools:
 - `generate_featured_image`
 
 `check_sri_versions` is now implemented natively in Go and no longer depends on the historical bash script at runtime.
+The live native catalog now also exposes MCP tool `title` and `annotations` metadata after redeploy.
 
 ## Behavioral Notes
 
@@ -21,10 +22,15 @@ The MCP tool catalog now includes the two previously missing Python tools:
 
 - `generate_featured_image`
   - accepts `style`, `title`, `subtitle`, `tags`, `accent`, `slug`, `route`, and `lang`
-  - validates safe slugs and accent colors
+  - validates safe slugs and requires an accent color in strict hex form like `#7aa2f7`
   - generates a local featured image file under `static/images/`
   - updates matched page frontmatter with `featuredImage`
   - fails closed on missing services or missing pages
+
+- `list_assets`
+  - `path_prefix` is root-relative under the Hugo `content/` or `static/` roots
+  - an exact directory prefix matches, partial substrings do not
+  - traversal attempts are rejected
 
 ## Ordering
 
@@ -47,6 +53,7 @@ The tool catalog is stable and deterministic. The current registration order mat
 - `go test -race ./...` passes
 - `go vet ./...` passes
 - `internal/tools` coverage is now `91.4%`
+- live native `tools/list` after redeploy shows `title`, `annotations.readOnlyHint`, and `annotations.destructiveHint`
 
 ## Remaining Gaps
 

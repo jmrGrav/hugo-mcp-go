@@ -10,6 +10,7 @@ import (
 	"github.com/jmrGrav/hugo-mcp-go/internal/config"
 	"github.com/jmrGrav/hugo-mcp-go/internal/observability"
 	"github.com/jmrGrav/hugo-mcp-go/internal/server"
+	"github.com/jmrGrav/hugo-mcp-go/internal/transport"
 )
 
 func main() {
@@ -27,10 +28,17 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	transportCfg, err := transport.LoadFromEnv()
+	if err != nil {
+		return err
+	}
 
 	svc, err := server.New(cfg)
 	if err != nil {
 		return err
+	}
+	if transportCfg.Transport == "http" {
+		return svc.RunHTTP(ctx, transportCfg, nil)
 	}
 	return svc.RunStdio(ctx)
 }

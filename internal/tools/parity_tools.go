@@ -37,7 +37,7 @@ type generateFeaturedImageInput struct {
 	Title    string   `json:"title"`
 	Subtitle string   `json:"subtitle,omitempty"`
 	Tags     []string `json:"tags,omitempty"`
-	Accent   string   `json:"accent,omitempty"`
+	Accent   string   `json:"accent,omitempty" jsonschema:"hex accent color like #7aa2f7"`
 	Slug     string   `json:"slug"`
 	Route    string   `json:"route,omitempty"`
 	Lang     string   `json:"lang,omitempty"`

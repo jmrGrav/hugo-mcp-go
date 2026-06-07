@@ -2,11 +2,13 @@ package assets
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -23,6 +25,7 @@ type ListRequest struct {
 	Type       string
 	PathPrefix string
 	MaxResults int
+	Cursor     string
 }
 
 type Asset struct {
@@ -33,9 +36,28 @@ type Asset struct {
 }
 
 type ListResult struct {
-	Count     int     `json:"count"`
-	Truncated bool    `json:"truncated"`
-	Assets    []Asset `json:"assets"`
+	Count      int     `json:"count"`
+	Truncated  bool    `json:"truncated"`
+	Assets     []Asset `json:"assets"`
+	HasMore    bool    `json:"has_more,omitempty"`
+	NextCursor string  `json:"next_cursor,omitempty"`
+}
+
+type ChunkRequest struct {
+	Path       string
+	Cursor     int
+	ChunkBytes int
+}
+
+type ChunkResult struct {
+	Path       string `json:"path"`
+	MimeType   string `json:"mime_type"`
+	Chunk      string `json:"chunk"`
+	Cursor     int    `json:"cursor"`
+	NextCursor string `json:"next_cursor,omitempty"`
+	ChunkBytes int    `json:"chunk_bytes"`
+	TotalBytes int    `json:"total_bytes"`
+	IsLast     bool   `json:"is_last"`
 }
 
 func New(hugoRoot, contentRoot, staticRoot string) *Service {
@@ -60,6 +82,10 @@ func (s *Service) List(ctx context.Context, req ListRequest) (ListResult, error)
 	}
 	if maxResults > 500 {
 		maxResults = 500
+	}
+	offset, err := parseOffset(req.Cursor)
+	if err != nil {
+		return ListResult{}, err
 	}
 	pathPrefix, err := normalizePathPrefix(req.PathPrefix)
 	if err != nil {
@@ -135,11 +161,72 @@ func (s *Service) List(ctx context.Context, req ListRequest) (ListResult, error)
 		}
 		return out[i].Modified > out[j].Modified
 	})
-	truncated := len(out) > maxResults
-	if truncated {
-		out = out[:maxResults]
+	total := len(out)
+	if offset > total {
+		offset = len(out)
 	}
-	return ListResult{Count: len(out), Truncated: truncated, Assets: out}, nil
+	end := offset + maxResults
+	if end > total {
+		end = total
+	}
+	window := out[offset:end]
+	truncated := end < total
+	res := ListResult{Count: len(window), Truncated: truncated, Assets: window}
+	if truncated {
+		res.HasMore = true
+		res.NextCursor = strconv.Itoa(end)
+	}
+	return res, nil
+}
+
+func (s *Service) GetChunk(ctx context.Context, req ChunkRequest) (ChunkResult, error) {
+	if err := ctx.Err(); err != nil {
+		return ChunkResult{}, err
+	}
+	hugoRoot, err := pathguard.CanonicalDir(s.HugoRoot)
+	if err != nil {
+		return ChunkResult{}, err
+	}
+	rel, err := normalizeChunkPath(req.Path)
+	if err != nil {
+		return ChunkResult{}, err
+	}
+	file, err := pathguard.ResolveExistingPath(hugoRoot, rel)
+	if err != nil {
+		return ChunkResult{}, err
+	}
+	raw, err := os.ReadFile(file)
+	if err != nil {
+		return ChunkResult{}, err
+	}
+	if req.ChunkBytes <= 0 {
+		req.ChunkBytes = 64 << 10
+	}
+	if req.Cursor < 0 {
+		return ChunkResult{}, fmt.Errorf("invalid cursor: must be >= 0")
+	}
+	offset := req.Cursor
+	if offset > len(raw) {
+		offset = len(raw)
+	}
+	end := offset + req.ChunkBytes
+	if end > len(raw) {
+		end = len(raw)
+	}
+	chunk := base64.StdEncoding.EncodeToString(raw[offset:end])
+	out := ChunkResult{
+		Path:       filepath.ToSlash(rel),
+		MimeType:   mimeTypeFor(filepath.Ext(rel)),
+		Chunk:      chunk,
+		Cursor:     offset,
+		ChunkBytes: end - offset,
+		TotalBytes: len(raw),
+		IsLast:     end >= len(raw),
+	}
+	if !out.IsLast {
+		out.NextCursor = strconv.Itoa(end)
+	}
+	return out, nil
 }
 
 func normalizePathPrefix(raw string) (string, error) {
@@ -210,3 +297,29 @@ func mimeTypeFor(ext string) string {
 }
 
 func stableNow() string { return time.Now().Format(time.RFC3339) }
+
+func parseOffset(raw string) (int, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return 0, nil
+	}
+	v, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, fmt.Errorf("invalid cursor: %w", err)
+	}
+	if v < 0 {
+		return 0, fmt.Errorf("invalid cursor: must be >= 0")
+	}
+	return v, nil
+}
+
+func normalizeChunkPath(raw string) (string, error) {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return "", fmt.Errorf("missing path")
+	}
+	if strings.Contains(s, "\\") || strings.Contains(s, "..") || strings.HasPrefix(s, "/") {
+		return "", fmt.Errorf("invalid path")
+	}
+	return pathguard.ValidateRelative(s)
+}
