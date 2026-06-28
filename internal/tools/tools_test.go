@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -491,6 +492,9 @@ func TestMutationToolMissingStagingSerialization(t *testing.T) {
 	}
 }
 
+// TestSchemaPropertiesHaveExplicitTypes is a targeted regression test for the
+// three fields that previously used Go's `any` type and produced empty {}
+// JSON Schema fragments (no type/oneOf/anyOf/$ref), which Claude Code rejects.
 func TestSchemaPropertiesHaveExplicitTypes(t *testing.T) {
 	session, ctx := mustNewMutationSession(t, Deps{})
 	defer session.Close()
@@ -554,6 +558,123 @@ func TestSchemaPropertiesHaveExplicitTypes(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestAllToolSchemasHaveNoEmptyFragments walks every inputSchema and
+// outputSchema for every registered tool and fails if any JSON Schema node
+// is an empty object ({}) without a type, oneOf, anyOf, allOf, $ref, or
+// enum keyword. Such nodes are generated when Go's `any`/`interface{}` type
+// leaks into a schema and are rejected by the Claude Code MCP validator.
+func TestAllToolSchemasHaveNoEmptyFragments(t *testing.T) {
+	session, ctx := mustNewMutationSession(t, Deps{})
+	defer session.Close()
+
+	toolsRes, err := session.ListTools(ctx, nil)
+	if err != nil {
+		t.Fatalf("ListTools() error = %v", err)
+	}
+
+	for _, tool := range toolsRes.Tools {
+		if tool.InputSchema != nil {
+			raw, err := json.Marshal(tool.InputSchema)
+			if err != nil {
+				t.Fatalf("tool %s: marshal inputSchema: %v", tool.Name, err)
+			}
+			var node map[string]any
+			if err := json.Unmarshal(raw, &node); err != nil {
+				t.Fatalf("tool %s: decode inputSchema: %v", tool.Name, err)
+			}
+			if violations := collectEmptySchemaNodes(node, "inputSchema"); len(violations) > 0 {
+				for _, v := range violations {
+					t.Errorf("tool %s: empty schema node at %s — add a type or constraint (Claude Code rejects {})", tool.Name, v)
+				}
+			}
+		}
+		if tool.OutputSchema != nil {
+			raw, err := json.Marshal(tool.OutputSchema)
+			if err != nil {
+				t.Fatalf("tool %s: marshal outputSchema: %v", tool.Name, err)
+			}
+			var node map[string]any
+			if err := json.Unmarshal(raw, &node); err != nil {
+				t.Fatalf("tool %s: decode outputSchema: %v", tool.Name, err)
+			}
+			if violations := collectEmptySchemaNodes(node, "outputSchema"); len(violations) > 0 {
+				for _, v := range violations {
+					t.Errorf("tool %s: empty schema node at %s — add a type or constraint (Claude Code rejects {})", tool.Name, v)
+				}
+			}
+		}
+	}
+}
+
+// schemaKeywords is the set of JSON Schema keywords that give a node meaning.
+// A node that has none of these is considered an empty/unconstrained fragment.
+var schemaKeywords = map[string]struct{}{
+	"type": {}, "oneOf": {}, "anyOf": {}, "allOf": {}, "$ref": {},
+	"enum": {}, "const": {}, "not": {}, "if": {},
+}
+
+// collectEmptySchemaNodes recursively walks a decoded JSON Schema object and
+// returns the JSON pointer paths of any nodes that are empty objects (no
+// recognised keywords). It skips meta-fields like "title", "description",
+// "default", "$schema", "definitions", "$defs", and "examples".
+func collectEmptySchemaNodes(node map[string]any, path string) []string {
+	skipKeys := map[string]struct{}{
+		"title": {}, "description": {}, "default": {}, "$schema": {},
+		"definitions": {}, "$defs": {}, "examples": {}, "deprecated": {},
+	}
+
+	var violations []string
+
+	hasKeyword := false
+	for k := range schemaKeywords {
+		if _, ok := node[k]; ok {
+			hasKeyword = true
+			break
+		}
+	}
+	meaningfulKeys := 0
+	for k := range node {
+		if _, skip := skipKeys[k]; !skip {
+			meaningfulKeys++
+		}
+	}
+	if !hasKeyword && meaningfulKeys == 0 {
+		violations = append(violations, path)
+	}
+
+	// Recurse into properties
+	if props, ok := node["properties"].(map[string]any); ok {
+		for name, val := range props {
+			if child, ok := val.(map[string]any); ok {
+				violations = append(violations, collectEmptySchemaNodes(child, path+"/properties/"+name)...)
+			}
+		}
+	}
+
+	// Recurse into additionalProperties if it's an object (not a bool)
+	if ap, ok := node["additionalProperties"].(map[string]any); ok {
+		violations = append(violations, collectEmptySchemaNodes(ap, path+"/additionalProperties")...)
+	}
+
+	// Recurse into items
+	if items, ok := node["items"].(map[string]any); ok {
+		violations = append(violations, collectEmptySchemaNodes(items, path+"/items")...)
+	}
+
+	// Recurse into oneOf / anyOf / allOf arrays
+	for _, keyword := range []string{"oneOf", "anyOf", "allOf"} {
+		if arr, ok := node[keyword].([]any); ok {
+			for i, elem := range arr {
+				if child, ok := elem.(map[string]any); ok {
+					violations = append(violations, collectEmptySchemaNodes(child, fmt.Sprintf("%s/%s/%d", path, keyword, i))...)
+				}
+			}
+		}
+	}
+
+	return violations
 }
 
 func TestMustJSON(t *testing.T) {

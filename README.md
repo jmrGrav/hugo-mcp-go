@@ -90,9 +90,13 @@ See:
 - [`SECURITY.md`](SECURITY.md)
 - [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md)
 
+## Schema Compatibility
+
+All MCP tool `inputSchema` and `outputSchema` fragments are validated in the test suite to ensure they carry an explicit JSON Schema keyword (`type`, `oneOf`, `anyOf`, `allOf`, `$ref`, `enum`, or `const`). Empty fragments (`{}`) are rejected by the Claude Code MCP validator; the test `TestAllToolSchemasHaveNoEmptyFragments` catches any regression of this kind before it reaches production.
+
 ## Validation
 
-The current release candidate has been validated with:
+The current release has been validated with:
 
 - `go test ./...`
 - `go test -race ./...`
