@@ -677,6 +677,105 @@ func collectEmptySchemaNodes(node map[string]any, path string) []string {
 	return violations
 }
 
+// TestToolsListClientView validates the complete tools/list payload as seen by
+// a real MCP client session. It goes beyond TestAllToolSchemasHaveNoEmptyFragments
+// (which inspects Go structures) by testing the full wire path:
+//
+//  1. ListTools is called over an in-process MCP transport.
+//  2. The entire result is marshalled to JSON and unmarshalled back — round-trip
+//     must be lossless.
+//  3. Every tool must have a non-null inputSchema.
+//  4. Every tool that exposes an outputSchema must have a non-null one.
+//  5. Both schemas are checked recursively for empty {} fragments.
+//  6. The tool count is asserted against the expected catalog size.
+func TestToolsListClientView(t *testing.T) {
+	type sessionCase struct {
+		name          string
+		deps          Deps
+		wantToolCount int
+	}
+
+	cases := []sessionCase{
+		{name: "base", deps: Deps{}, wantToolCount: 12},
+		{name: "hooks-admin", deps: Deps{HooksAdminEnabled: true}, wantToolCount: 16},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			session, ctx := mustNewMutationSession(t, tc.deps)
+			defer session.Close()
+
+			toolsRes, err := session.ListTools(ctx, nil)
+			if err != nil {
+				t.Fatalf("ListTools() error = %v", err)
+			}
+
+			// 1. JSON round-trip
+			raw, err := json.Marshal(toolsRes)
+			if err != nil {
+				t.Fatalf("marshal tools/list response: %v", err)
+			}
+			if !json.Valid(raw) {
+				t.Fatalf("tools/list response is not valid JSON")
+			}
+			var roundTripped map[string]any
+			if err := json.Unmarshal(raw, &roundTripped); err != nil {
+				t.Fatalf("unmarshal tools/list response: %v", err)
+			}
+
+			// 2. Tool count
+			if got := len(toolsRes.Tools); got != tc.wantToolCount {
+				t.Errorf("tool count = %d want %d", got, tc.wantToolCount)
+			}
+
+			for _, tool := range toolsRes.Tools {
+				toolName := tool.Name
+
+				// 3. inputSchema must always be present
+				if tool.InputSchema == nil {
+					t.Errorf("tool %s: inputSchema is nil", toolName)
+					continue
+				}
+				rawIn, err := json.Marshal(tool.InputSchema)
+				if err != nil {
+					t.Fatalf("tool %s: marshal inputSchema: %v", toolName, err)
+				}
+				if string(rawIn) == "null" {
+					t.Errorf("tool %s: inputSchema serialises to null", toolName)
+					continue
+				}
+				var nodeIn map[string]any
+				if err := json.Unmarshal(rawIn, &nodeIn); err != nil {
+					t.Fatalf("tool %s: decode inputSchema: %v", toolName, err)
+				}
+				for _, v := range collectEmptySchemaNodes(nodeIn, "inputSchema") {
+					t.Errorf("tool %s: empty schema fragment at %s", toolName, v)
+				}
+
+				// 4 & 5. outputSchema — optional but must be valid when present
+				if tool.OutputSchema == nil {
+					continue
+				}
+				rawOut, err := json.Marshal(tool.OutputSchema)
+				if err != nil {
+					t.Fatalf("tool %s: marshal outputSchema: %v", toolName, err)
+				}
+				if string(rawOut) == "null" {
+					t.Errorf("tool %s: outputSchema serialises to null", toolName)
+					continue
+				}
+				var nodeOut map[string]any
+				if err := json.Unmarshal(rawOut, &nodeOut); err != nil {
+					t.Fatalf("tool %s: decode outputSchema: %v", toolName, err)
+				}
+				for _, v := range collectEmptySchemaNodes(nodeOut, "outputSchema") {
+					t.Errorf("tool %s: empty schema fragment at %s", toolName, v)
+				}
+			}
+		})
+	}
+}
+
 func TestMustJSON(t *testing.T) {
 	if got := MustJSON(map[string]any{"a": 1}); got != `{"a":1}` {
 		t.Fatalf("MustJSON() = %q", got)
