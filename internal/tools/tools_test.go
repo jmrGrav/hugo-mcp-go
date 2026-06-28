@@ -491,6 +491,71 @@ func TestMutationToolMissingStagingSerialization(t *testing.T) {
 	}
 }
 
+func TestSchemaPropertiesHaveExplicitTypes(t *testing.T) {
+	session, ctx := mustNewMutationSession(t, Deps{})
+	defer session.Close()
+
+	toolsRes, err := session.ListTools(ctx, nil)
+	if err != nil {
+		t.Fatalf("ListTools() error = %v", err)
+	}
+
+	toolsByName := make(map[string]*mcp.Tool, len(toolsRes.Tools))
+	for _, tool := range toolsRes.Tools {
+		toolsByName[tool.Name] = tool
+	}
+
+	cases := []struct {
+		tool     string
+		schema   string // "input" or "output"
+		property string
+	}{
+		{tool: "create_page", schema: "input", property: "frontmatter"},
+		{tool: "update_page", schema: "input", property: "frontmatter"},
+		{tool: "check_sri_versions", schema: "output", property: "downstream"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.tool+"/"+tc.schema+"/"+tc.property, func(t *testing.T) {
+			tool := toolsByName[tc.tool]
+			if tool == nil {
+				t.Fatalf("tool %q not found", tc.tool)
+			}
+
+			var src any
+			if tc.schema == "input" {
+				src = tool.InputSchema
+			} else {
+				src = tool.OutputSchema
+			}
+			if src == nil {
+				t.Fatalf("tool %q %s schema is nil", tc.tool, tc.schema)
+			}
+
+			raw, err := json.Marshal(src)
+			if err != nil {
+				t.Fatalf("marshal %s schema for %s: %v", tc.schema, tc.tool, err)
+			}
+			var schema map[string]any
+			if err := json.Unmarshal(raw, &schema); err != nil {
+				t.Fatalf("decode %s schema for %s: %v", tc.schema, tc.tool, err)
+			}
+			props, ok := schema["properties"].(map[string]any)
+			if !ok {
+				t.Fatalf("tool %s %s schema missing properties", tc.tool, tc.schema)
+			}
+			prop, ok := props[tc.property].(map[string]any)
+			if !ok {
+				t.Fatalf("tool %s %s schema missing property %q", tc.tool, tc.schema, tc.property)
+			}
+			typ, ok := prop["type"].(string)
+			if !ok || typ == "" {
+				t.Fatalf("tool %s %s schema property %q has no explicit type (got %#v); Claude Code rejects empty schemas", tc.tool, tc.schema, tc.property, prop)
+			}
+		})
+	}
+}
+
 func TestMustJSON(t *testing.T) {
 	if got := MustJSON(map[string]any{"a": 1}); got != `{"a":1}` {
 		t.Fatalf("MustJSON() = %q", got)

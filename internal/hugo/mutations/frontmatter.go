@@ -28,6 +28,9 @@ func normalizeFrontmatterInput(raw any) (map[string]any, error) {
 	}
 	switch x := raw.(type) {
 	case map[string]any:
+		if x == nil {
+			return map[string]any{}, nil
+		}
 		return x, nil
 	case string:
 		if x == "" {

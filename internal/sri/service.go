@@ -150,11 +150,9 @@ func (s *Service) Check(ctx context.Context, req Request) (Result, error) {
 			result.Report.AutoFix.Skipped = false
 			if downstream != nil {
 				result.Downstream = downstream
-				if summary, ok := downstream.(map[string]any); ok {
-					if cloudflare, ok := summary["cloudflare_purge"].(map[string]any); ok {
-						status, _ := cloudflare["status"].(string)
-						result.Report.AutoFix.CFPurged = status != ""
-					}
+				if cloudflare, ok := downstream["cloudflare_purge"].(map[string]any); ok {
+					status, _ := cloudflare["status"].(string)
+					result.Report.AutoFix.CFPurged = status != ""
 				}
 			}
 		} else if len(scan.AutoFixCandidates) > 0 {
@@ -604,7 +602,7 @@ func (s *Service) fetchBytes(ctx context.Context, target string) ([]byte, error)
 	return io.ReadAll(io.LimitReader(resp.Body, 8<<20))
 }
 
-func (s *Service) applyAutoFix(ctx context.Context, cdnPath, sriPath string, scan *runState, cdnEntries map[string]cdnEntry, sriEntries map[string]string) (bool, any, []string) {
+func (s *Service) applyAutoFix(ctx context.Context, cdnPath, sriPath string, scan *runState, cdnEntries map[string]cdnEntry, sriEntries map[string]string) (bool, map[string]any, []string) {
 	_ = ctx
 	if len(scan.AutoFixCandidates) == 0 {
 		return false, nil, nil

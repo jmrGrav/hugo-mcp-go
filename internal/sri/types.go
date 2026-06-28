@@ -19,7 +19,7 @@ type Result struct {
 	AutoFixRequested  bool        `json:"auto_fix_requested"`
 	DryRun            bool        `json:"dry_run"`
 	Report            Report      `json:"report"`
-	Downstream        any         `json:"downstream,omitempty"`
+	Downstream        map[string]any `json:"downstream,omitempty"`
 }
 
 type Report struct {

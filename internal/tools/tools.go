@@ -69,23 +69,23 @@ type getAssetChunkInput struct {
 type getAssetChunkOutput = assets.ChunkResult
 
 type createPageInput struct {
-	Route       string   `json:"route"`
-	Lang        string   `json:"lang,omitempty"`
-	Title       string   `json:"title"`
-	Content     string   `json:"content"`
-	Tags        []string `json:"tags,omitempty"`
-	Draft       *bool    `json:"draft,omitempty"`
-	Frontmatter any      `json:"frontmatter,omitempty"`
+	Route       string            `json:"route"`
+	Lang        string            `json:"lang,omitempty"`
+	Title       string            `json:"title"`
+	Content     string            `json:"content"`
+	Tags        []string          `json:"tags,omitempty"`
+	Draft       *bool             `json:"draft,omitempty"`
+	Frontmatter map[string]any    `json:"frontmatter,omitempty"`
 }
 
 type updatePageInput struct {
-	Route       string    `json:"route"`
-	Lang        string    `json:"lang,omitempty"`
-	Title       *string   `json:"title,omitempty"`
-	Content     *string   `json:"content,omitempty"`
-	Tags        *[]string `json:"tags,omitempty"`
-	Draft       *bool     `json:"draft,omitempty"`
-	Frontmatter any       `json:"frontmatter,omitempty"`
+	Route       string            `json:"route"`
+	Lang        string            `json:"lang,omitempty"`
+	Title       *string           `json:"title,omitempty"`
+	Content     *string           `json:"content,omitempty"`
+	Tags        *[]string         `json:"tags,omitempty"`
+	Draft       *bool             `json:"draft,omitempty"`
+	Frontmatter map[string]any    `json:"frontmatter,omitempty"`
 }
 
 type deletePageInput struct {
